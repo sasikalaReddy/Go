@@ -141,8 +141,8 @@ func (t *MedLabPharmaChaincode) Query(stub shim.ChaincodeStubInterface, function
 		return t.GetMaxIDValue(stub)
 	} else if function == "GetEmptyContainer" {
 		return t.GetEmptyContainer(stub)
-	}  else if function == "getContainerDetailsforowner" {
-		return t.getContainerDetailsforowner(stub, args[0])
+	}  else if function == "GetContainerDetailsforOwner" {
+		return t.GetContainerDetailsforOwner(stub, args[0])
 	}
 	
 	fmt.Println("query did not find func: " + function)
@@ -313,7 +313,7 @@ func (t *MedLabPharmaChaincode) SetCurrentOwnerTest(stub shim.ChaincodeStubInter
 	return []byte("success"), err
 }
 
-func (t *MedLabPharmaChaincode) getContainerDetailsforowner(stub shim.ChaincodeStubInterface, ownerID string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) GetContainerDetailsforOwner(stub shim.ChaincodeStubInterface, ownerID string) ([]byte, error) {
 	ConMaxAsbytes, err := stub.GetState(CONTAINER_OWNER)
 	if err != nil {
 		jsonResp := "{\"Error\":\"Failed to get state for ContainerMaxNumber \"}"
