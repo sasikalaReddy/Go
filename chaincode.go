@@ -141,8 +141,8 @@ func (t *MedLabPharmaChaincode) Query(stub shim.ChaincodeStubInterface, function
 		return t.GetMaxIDValue(stub)
 	} else if function == "GetEmptyContainer" {
 		return t.GetEmptyContainer(stub)
-	}  else if function == "GetContainerDetailsforOwner" {
-		return t.GetContainerDetailsforOwner(stub, args[0])
+	}  else if function == "GetContainerDetailsForOwner" {
+		return t.GetContainerDetailsForOwner(stub, args[0])
 	}
 	
 	fmt.Println("query did not find func: " + function)
@@ -313,55 +313,43 @@ func (t *MedLabPharmaChaincode) SetCurrentOwnerTest(stub shim.ChaincodeStubInter
 	return []byte("success"), err
 }
 
-func (t *MedLabPharmaChaincode) GetContainerDetailsforOwner(stub shim.ChaincodeStubInterface, ownerID string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) GetContainerDetailsForOwner(stub shim.ChaincodeStubInterface, ownerID string) ([]byte, error) {
+
+	fmt.Println("Fetching container details for Owner:" + ownerID)
+
 	ConMaxAsbytes, err := stub.GetState(CONTAINER_OWNER)
 	if err != nil {
-		jsonResp := "{\"Error\":\"Failed to get state for ContainerMaxNumber \"}"
+		jsonResp := "{\"Error\":\"Failed to get state for Container Owners \"}"
 		return nil, errors.New(jsonResp)
 	}
 	ConOwners := ContainerOwners{}
 	json.Unmarshal([]byte(ConMaxAsbytes), &ConOwners)
 
-    fmt.Println("owne1r= "+ConOwners.Owners[0].OwnerId)
 	var containerList []string
-	//var result [][]byte
 	var matchFound bool
-    fmt.Println("owne2r= "+ConOwners.Owners[0].OwnerId)
-	 
+
 	for index := range ConOwners.Owners {
-          fmt.Println("owne3r= "+ConOwners.Owners[0].OwnerId + " inp="+ownerID)
-	if ConOwners.Owners[index].OwnerId == ownerID {
-	        fmt.Println("owne4r= "+ConOwners.Owners[index].OwnerId)
-	       containerList = ConOwners.Owners[index].ContainerList
-			
-	        matchFound = true
+		if ConOwners.Owners[index].OwnerId == ownerID {
+			containerList = ConOwners.Owners[index].ContainerList
+			matchFound = true
 			break
 		}
 	}
-    fmt.Println("Container List " + containerList[0])
-	 if matchFound {
-     fmt.Println("match found ")
-     shipment :=Shipment{}
-	 for _,containerID := range containerList{
-		fmt.Println(containerID)
-		byteVal,_ :=  t.GetContainerDetails(stub,  containerID)
-	    container := Container{}
-	    json.Unmarshal([]byte(byteVal), &container)
-        fmt.Println(container)
-        fmt.Println("shipment= "+container.ContainerId)
-        shipment.ContainerList = append(shipment.ContainerList, container)
-         // fmt.Println("shipment after appending= "+shipment)
-         // result= append(result,byteVal)
-	 }
-	    jsonVal, _:= json.Marshal(shipment)
-	    return jsonVal, nil
-		
-	}   
-    return nil, nil
-	
-	//result = []{"CON01","CON02","CON03"}
-		//jsonVal, _ = json.Marshal(result)
-	
+	if matchFound {
+		fmt.Println("MatchFound for Owner:" + ownerID)
+		shipment := Shipment{}
+		for _, containerID := range containerList {
+			byteVal, _ := t.GetContainerDetails(stub, containerID)
+			container := Container{}
+			json.Unmarshal([]byte(byteVal), &container)
+			shipment.ContainerList = append(shipment.ContainerList, container)
+		}
+		jsonVal, _ := json.Marshal(shipment)
+		return jsonVal, nil
+	} else {
+		fmt.Println("Container details not found for Owner:" + ownerID)
+		return nil, errors.New("Unable to get container details for Owner:" + ownerID)
+	}
 }
 
 func setCurrentOwner(stub shim.ChaincodeStubInterface, ownerID string, containerID string) error {
