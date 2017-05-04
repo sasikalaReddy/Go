@@ -17,6 +17,7 @@ import (
 )
 
 const STATUS_SHIPPED = "shipped"
+const STATUS_RECEIVED = "accepted"
 const UNIQUE_ID_COUNTER string = "UniqueIDCounter"
 const CONTAINER_OWNER = "ContainerOwner"
 
@@ -123,6 +124,8 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
 		return t.ShipContainerUsingLogistics(stub, args[0], args[1], args[2], args[3], args[4])
 	} else if function == "SetCurrentOwner"{
 		return t.SetCurrentOwnerTest(stub, args[0], args[1])
+	} else if function == "AcceptContainerbyLogistics"{
+		return t.AcceptContainerbyLogistics(stub, args[0], args[1],args[2], args[3],args[4])
 	}
 	 
 	fmt.Println("invoke did not find func: " + function)
@@ -338,18 +341,59 @@ func (t *MedLabPharmaChaincode) GetContainerDetailsForOwner(stub shim.ChaincodeS
 	if matchFound {
 		fmt.Println("MatchFound for Owner:" + ownerID)
 		shipment := Shipment{}
+	
 		for _, containerID := range containerList {
 			byteVal, _ := t.GetContainerDetails(stub, containerID)
 			container := Container{}
 			json.Unmarshal([]byte(byteVal), &container)
+			fmt.Println("***************AhggfDSJFKJJDS**********")
+			fmt.Println(container)
 			shipment.ContainerList = append(shipment.ContainerList, container)
 		}
 		jsonVal, _ := json.Marshal(shipment)
+		fmt.Println("**************hjfiua*************")
+		fmt.Println(shipment)
+		fmt.Println(jsonVal)
 		return jsonVal, nil
 	} else {
 		fmt.Println("Container details not found for Owner:" + ownerID)
 		return nil, errors.New("Unable to get container details for Owner:" + ownerID)
 	}
+}
+func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, senderID string, logisticsID string, receiverID string, remarks string) ([]byte, error) {
+
+	fmt.Println("Accepting the  container by Logistics:" + logisticsID)
+     valAsbytes, err := stub.GetState(containerID)
+	 fmt.Println("json value from the container****************")
+	 fmt.Println(valAsbytes)
+	 if err != nil{
+		jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
+		return nil, errors.New(jsonResp)
+	}
+	  shipment := Container{}	  
+	json.Unmarshal([]byte(valAsbytes), &shipment)
+	shipment.Recipient = receiverID
+	conprov := shipment.Provenance  
+    supplychain := conprov.Supplychain     
+	chainActivity := ChainActivity{
+		Sender:   senderID,
+		Receiver: logisticsID,
+		Status:   STATUS_RECEIVED}  
+	supplychain = append(supplychain, chainActivity) 
+	conprov.Supplychain = supplychain
+   conprov.TransitStatus = STATUS_RECEIVED
+   conprov.Sender = senderID
+   conprov.Receiver = logisticsID
+   shipment.Provenance = conprov
+   jsonVal, _ := json.Marshal(shipment)
+   	err = stub.PutState(containerID, jsonVal)
+    if err != nil{
+		jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
+		return nil, errors.New(jsonResp)
+	}	
+	
+	setCurrentOwner(stub, logisticsID, containerID)
+	return nil, nil		
 }
 
 func setCurrentOwner(stub shim.ChaincodeStubInterface, ownerID string, containerID string) error {
