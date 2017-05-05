@@ -46,6 +46,7 @@ type Container struct {
 	ShipmentDate      string              `json:"shipment_date"`  ///New fields
 	InvoiceNumber     string              `json:"invoice_number"` ///New fields
 	Remarks           string              `json:"remarks"`        ///New fields
+
 }
 
 type ContainerElements struct {
@@ -183,6 +184,7 @@ func (t *MedLabPharmaChaincode) ShipContainerUsingLogistics(stub shim.ChaincodeS
 		return nil, err
 	}
 	return nil, nil
+
 }
 
 // read - query function to read key/value pair
@@ -386,12 +388,13 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
    conprov.Receiver = logisticsID
    shipment.Provenance = conprov
    jsonVal, _ := json.Marshal(shipment)
-   	err = stub.PutState(containerID, jsonVal)
+   	err = stub.PutState(containerID, string(jsonVal))
     if err != nil{
 		jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
 		return nil, errors.New(jsonResp)
 	}	
-	
+	fmt.Println("*************hdkaskdsad*******************")
+	fmt.Println(string(jsonVal))
 	setCurrentOwner(stub, logisticsID, containerID)
 	return nil, nil		
 }
