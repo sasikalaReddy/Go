@@ -37,7 +37,7 @@ type Container struct {
 	ContainerId       string              `json:"container_id"`
 	ParentContainerId string              `json:"parent_container_id"`
 	ChildContainerId  []string            `json:"child_container_id"`
-	Recipient         string              `json:"logistics_id"`
+	Recipient         string              `json:"recipient_id"`
 	Elements          ContainerElements   `json:"elements"`
 	Provenance        ContainerProvenance `json:"provenance"`
 	CertifiedBy       string              `json:"certified_by"`   ///New fields
@@ -46,7 +46,7 @@ type Container struct {
 	ShipmentDate      string              `json:"shipment_date"`  ///New fields
 	InvoiceNumber     string              `json:"invoice_number"` ///New fields
 	Remarks           string              `json:"remarks"`        ///New fields
-
+  
 }
 
 type ContainerElements struct {
@@ -388,12 +388,11 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
    conprov.Receiver = logisticsID
    shipment.Provenance = conprov
    jsonVal, _ := json.Marshal(shipment)
-   	err = stub.PutState(containerID, string(jsonVal))
+   	err = stub.PutState(containerID, jsonVal)
     if err != nil{
 		jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
 		return nil, errors.New(jsonResp)
 	}	
-	fmt.Println("*************hdkaskdsad*******************")
 	fmt.Println(string(jsonVal))
 	setCurrentOwner(stub, logisticsID, containerID)
 	return nil, nil		
