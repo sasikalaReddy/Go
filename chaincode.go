@@ -381,6 +381,10 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 
 	fmt.Println("Accepting the  container by Logistics:" + logisticsID)
      valAsbytes, err := stub.GetState(containerID)
+	 if len(valAsbytes) == 0 {
+		 	jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
+		return nil, errors.New(jsonResp)
+	 }
 	 fmt.Println("json value from the container****************")
 	 fmt.Println(valAsbytes)
 	 if err != nil{
