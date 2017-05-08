@@ -380,6 +380,7 @@ func (t *MedLabPharmaChaincode) GetOwner(stub shim.ChaincodeStubInterface) ([]by
 func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, senderID string, logisticsID string, receiverID string, remarks string) ([]byte, error) {
 
 	fmt.Println("Accepting the  container by Logistics:" + logisticsID)
+	fmt.Println("Accepting the  container by Logistics:" + containerID)
      valAsbytes, err := stub.GetState(containerID)
 	 if len(valAsbytes) == 0 {
 		 	jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
