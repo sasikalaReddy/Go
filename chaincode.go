@@ -496,7 +496,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyDistributor(stub shim.Chaincode
 	conprov := shipment.Provenance  
     supplychain := conprov.Supplychain     
 	chainActivity := ChainActivity{
-		Sender:   shipment.Provenance.Receiver,
+		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
 		Status:   STATUS_ACCEPTED,		 
 		// ActivityTimeStamp=timeLayOut}
@@ -504,7 +504,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyDistributor(stub shim.Chaincode
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
    conprov.TransitStatus = STATUS_ACCEPTED
-   conprov.Sender = shipment.Provenance.Receiver
+   conprov.Sender = shipment.Provenance.Sender//taking sender from the container to avoid inconsistency of sender from UI
    conprov.Receiver = receiverID
    shipment.Provenance = conprov
    jsonVal, _ := json.Marshal(shipment)
@@ -514,8 +514,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyDistributor(stub shim.Chaincode
 		return nil, errors.New(jsonResp)
 	}
 	fmt.Println("JSON ACCEPTED BY WALMART")	
-	fmt.Println(shipment.Provenance.Receiver)
-	fmt.Println(string(jsonVal))
+		fmt.Println(string(jsonVal))
 	setCurrentOwner(stub, receiverID, containerID)
 	return nil, nil		
 }
