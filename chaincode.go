@@ -17,7 +17,8 @@ import (
 )
 
 const STATUS_SHIPPED = "shipped"
-const STATUS_RECEIVED = "accepted"
+const STATUS_ACCEPTED = "accepted"
+const STATUS_DISPATCHED = "dispatched"
 const UNIQUE_ID_COUNTER string = "UniqueIDCounter"
 const CONTAINER_OWNER = "ContainerOwner"
 //const RFC1123 = "Mon, 02 Jan 2006 15:04:05 MST"
@@ -130,10 +131,12 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
 		return t.SetCurrentOwnerTest(stub, args[0], args[1])
 	} else if function == "AcceptContainerbyLogistics"{
 		return t.AcceptContainerbyLogistics(stub, args[0], args[1],args[2], args[3],args[4])
-	}
-	 
+	}else if function == "DispatchContainer"{
+		return t.DispatchContainer(stub, args[0], args[1],args[2])
+	}else if function == "AcceptContainerbyDistributor"{
+		return t.AcceptContainerbyDistributor(stub, args[0], args[1],args[2])
+	}	 
 	fmt.Println("invoke did not find func: " + function)
-
 	return nil, errors.New("Received unknown function invocation: " + function)
 }
 
@@ -192,6 +195,57 @@ func (t *MedLabPharmaChaincode) ShipContainerUsingLogistics(stub shim.ChaincodeS
 	return nil, nil
 
 }
+func (t *MedLabPharmaChaincode)DispatchContainer(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string) ([]byte, error) {
+	var err error
+	fmt.Println("running DispatchContainer:" + containerID)
+     valAsbytes, err := stub.GetState(containerID)
+	 if len(valAsbytes) == 0 {
+		 	jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
+		return nil, errors.New(jsonResp)
+	 }
+	 fmt.Println("json value from the container****************")
+	 fmt.Println(valAsbytes)
+	 if err != nil{
+		jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
+		return nil, errors.New(jsonResp)
+	}
+	 shipment := Container{}	  
+	json.Unmarshal([]byte(valAsbytes), &shipment)
+	shipment.Recipient = receiverID
+	conprov := shipment.Provenance  
+    supplychain := conprov.Supplychain     
+	chainActivity := ChainActivity{
+		Sender:   shipment.Provenance.Receiver,//
+		Receiver: receiverID,
+		Status:   STATUS_DISPATCHED,		 
+		// ActivityTimeStamp=timeLayOut}
+		ActivityTimeStamp:time.Now().UTC()}  
+	supplychain = append(supplychain, chainActivity) 
+	conprov.Supplychain = supplychain
+   conprov.TransitStatus = STATUS_DISPATCHED
+   conprov.Sender = shipment.Provenance.Receiver
+   conprov.Receiver = receiverID
+   shipment.Provenance = conprov
+    jsonVal, _ := json.Marshal(shipment)
+   	err = stub.PutState(containerID, jsonVal)//write the variable into the chaincode state
+    if err != nil{
+		jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
+		return nil, errors.New(jsonResp)
+	}
+	fmt.Println("********DISPATCHED JSON***********")	
+	fmt.Println("SENDER",shipment.Provenance.Receiver)	
+	fmt.Println(string(jsonVal))	
+	incrementCounter(stub) //increment the unique ids for container and Pallet
+	setCurrentOwner(stub, receiverID, containerID)
+
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+
+}
+
+
 
 // read - query function to read key/value pair
 func (t *MedLabPharmaChaincode) GetContainerDetails(stub shim.ChaincodeStubInterface, container_id string) ([]byte, error) {
@@ -401,12 +455,12 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 	chainActivity := ChainActivity{
 		Sender:   senderID,
 		Receiver: logisticsID,
-		Status:   STATUS_RECEIVED,		 
+		Status:   STATUS_ACCEPTED,		 
 		// ActivityTimeStamp=timeLayOut}
 		ActivityTimeStamp:time.Now().UTC()}  
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
-   conprov.TransitStatus = STATUS_RECEIVED
+   conprov.TransitStatus = STATUS_ACCEPTED
    conprov.Sender = senderID
    conprov.Receiver = logisticsID
    shipment.Provenance = conprov
@@ -418,6 +472,51 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 	}	
 	fmt.Println(string(jsonVal))
 	setCurrentOwner(stub, logisticsID, containerID)
+	return nil, nil		
+}
+
+func (t *MedLabPharmaChaincode) AcceptContainerbyDistributor(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string) ([]byte, error) {
+    fmt.Println("Running AcceptContainerbyDistributor ")
+	fmt.Println("Accepting the  container by Logistics:" + containerID)
+     valAsbytes, err := stub.GetState(containerID)
+	 if len(valAsbytes) == 0 {
+		 	jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
+		return nil, errors.New(jsonResp)
+	 }
+	 fmt.Println("json value from the container****************")
+	 fmt.Println(valAsbytes)
+	 if err != nil{
+		jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
+		return nil, errors.New(jsonResp)
+	}
+	//timeLayOut := timePresent.Format(RFC1123)
+	  shipment := Container{}	  
+	json.Unmarshal([]byte(valAsbytes), &shipment)
+	shipment.Recipient = receiverID
+	conprov := shipment.Provenance  
+    supplychain := conprov.Supplychain     
+	chainActivity := ChainActivity{
+		Sender:   shipment.Provenance.Receiver,
+		Receiver: receiverID,
+		Status:   STATUS_ACCEPTED,		 
+		// ActivityTimeStamp=timeLayOut}
+		ActivityTimeStamp:time.Now().UTC()}  
+	supplychain = append(supplychain, chainActivity) 
+	conprov.Supplychain = supplychain
+   conprov.TransitStatus = STATUS_ACCEPTED
+   conprov.Sender = shipment.Provenance.Receiver
+   conprov.Receiver = receiverID
+   shipment.Provenance = conprov
+   jsonVal, _ := json.Marshal(shipment)
+   	err = stub.PutState(containerID, jsonVal)
+    if err != nil{
+		jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
+		return nil, errors.New(jsonResp)
+	}
+	fmt.Println("JSON ACCEPTED BY WALMART")	
+	fmt.Println(shipment.Provenance.Receiver)
+	fmt.Println(string(jsonVal))
+	setCurrentOwner(stub, receiverID, containerID)
 	return nil, nil		
 }
 
