@@ -131,13 +131,13 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
 	} else if function == "SetCurrentOwner"{
 		return t.SetCurrentOwnerTest(stub, args[0], args[1])
 	} else if function == "AcceptContainerbyLogistics"{
-		return t.AcceptContainerbyLogistics(stub, args[0], args[1],args[2], args[3],args[4])
+		return t.AcceptContainerbyLogistics(stub, args[0], args[1],args[2], args[3])
 	}else if function == "DispatchContainer"{
 		return t.DispatchContainer(stub, args[0], args[1],args[2])
 	}else if function == "AcceptContainerbyDistributor"{
 		return t.AcceptContainerbyDistributor(stub, args[0], args[1],args[2]) 
 	}else if function == "RejectContainerbyLogistics"{
-		return t.RejectContainerbyLogistics(stub, args[0], args[1],args[2],args[3],args[4]) 
+		return t.RejectContainerbyLogistics(stub, args[0], args[1],args[2],args[3]) 
 	}else if function == "RejectContainerbyDistributor"{
 		return t.RejectContainerbyDistributor(stub, args[0], args[1],args[2]) 
 	}	 
@@ -436,7 +436,7 @@ func (t *MedLabPharmaChaincode) GetOwner(stub shim.ChaincodeStubInterface) ([]by
 	}
 	return ConMaxAsbytes, nil
 }
-func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, senderID string, logisticsID string, receiverID string, remarks string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string) ([]byte, error) {
 
 	fmt.Println("Accepting the  container by Logistics:" + logisticsID)
 	fmt.Println("Accepting the  container by Logistics:" + containerID)
@@ -458,7 +458,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 	conprov := shipment.Provenance  
     supplychain := conprov.Supplychain     
 	chainActivity := ChainActivity{
-		Sender:   senderID,
+		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
 		Status:   STATUS_ACCEPTED,		 
 		// ActivityTimeStamp=timeLayOut}
@@ -466,7 +466,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
    conprov.TransitStatus = STATUS_ACCEPTED
-   conprov.Sender = senderID
+   conprov.Sender = shipment.Provenance.Sender
    conprov.Receiver = logisticsID
    shipment.Provenance = conprov
    jsonVal, _ := json.Marshal(shipment)
@@ -476,13 +476,13 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 		return nil, errors.New(jsonResp)
 	}	
 	fmt.Println(string(jsonVal))
+	fmt.Println(string(shipment.Provenance.Sender))
 	setCurrentOwner(stub, logisticsID, containerID)
 	return nil, nil		
 }
-func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, senderID string, logisticsID string, receiverID string, remarks string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string) ([]byte, error) {
 
-	fmt.Println("Rejecting the  container by Logistics:" + logisticsID)
-	fmt.Println("Rejecting the  container by Logistics:" + containerID)
+	fmt.Println("Rejecting the  container by Logistics:" + logisticsID + containerID)
      valAsbytes, err := stub.GetState(containerID)
 	 if len(valAsbytes) == 0 {
 		 	jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
@@ -507,7 +507,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeSt
 	conprov := shipment.Provenance  
     supplychain := conprov.Supplychain     
 	chainActivity := ChainActivity{
-		Sender:   senderID,
+		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
 		Status:   STATUS_REJECTED,		 
 		// ActivityTimeStamp=timeLayOut}
@@ -515,7 +515,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeSt
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
    conprov.TransitStatus = STATUS_REJECTED
-   conprov.Sender = senderID
+   conprov.Sender = shipment.Provenance.Sender
    conprov.Receiver = logisticsID
    shipment.Provenance = conprov
    jsonVal, _ := json.Marshal(shipment)
@@ -525,6 +525,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeSt
 		return nil, errors.New(jsonResp)
 	}	
 	fmt.Println(string(jsonVal))
+	fmt.Println("SENDER",shipment.Provenance.Sender)
 		setCurrentOwner(stub, logisticsID, containerID)
 	return nil, nil		
 }
