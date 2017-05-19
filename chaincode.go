@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 )
 
@@ -89,9 +88,7 @@ type ChainActivity struct {
 	Sender   string `json:sender`
 	Receiver string `json:receiver`
 	Status   string `json:transit_status`
-	ActivityTimeStamp time.Time `json:activity_timeStamp`
-	//ActivityTimeStamp1 time.Time `json:activity_timeStamp`
-}
+	}
 
 type ContainerOwners struct {
 	Owners []Owner `json:owners`
@@ -160,6 +157,8 @@ func (t *MedLabPharmaChaincode) Query(stub shim.ChaincodeStubInterface, function
 		return t.GetContainerDetailsForOwner(stub, args[0])
 	}else if function == "GetOwner" {
 		return t.GetOwner(stub)
+	}else if function == "GetUserAttribute" {
+		return t.GetUserAttribute(stub, args[0])
 	}
 	
 	fmt.Println("query did not find func: " + function)
@@ -223,8 +222,7 @@ func (t *MedLabPharmaChaincode)DispatchContainer(stub shim.ChaincodeStubInterfac
 		Sender:   shipment.Provenance.Receiver,//
 		Receiver: receiverID,
 		Status:   STATUS_DISPATCHED,		 
-		// ActivityTimeStamp=timeLayOut}
-		ActivityTimeStamp:time.Now().UTC()}  
+		}  
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
    conprov.TransitStatus = STATUS_DISPATCHED
@@ -306,14 +304,12 @@ func (t *MedLabPharmaChaincode) GetEmptyContainer(stub shim.ChaincodeStubInterfa
 
 func ShipContainerUsingLogistics_Internal(senderID string,
 	logisticsID string, receiverID string, remarks string, elementsJSON string) (string, []byte) {
-		//ActivityTimeStamp1=time.Now().UTC()
-	chainActivity := ChainActivity{
+		chainActivity := ChainActivity{
 		Sender:   senderID,
 		Receiver: logisticsID,
 		Status:   STATUS_SHIPPED,
-		ActivityTimeStamp:time.Now().UTC()}
-		//ActivityTimeStamp: ActivityTimeStamp1.Format("2006-01-02 15:04:05")} 
-	var supplyChain []ChainActivity
+		}
+		var supplyChain []ChainActivity
 	supplyChain = append(supplyChain, chainActivity)
 	conprov := ContainerProvenance{
 		TransitStatus: STATUS_SHIPPED,
@@ -461,8 +457,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
 		Status:   STATUS_ACCEPTED,		 
-		// ActivityTimeStamp=timeLayOut}
-		ActivityTimeStamp:time.Now().UTC()}  
+		}  
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
    conprov.TransitStatus = STATUS_ACCEPTED
@@ -510,8 +505,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeSt
 		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
 		Status:   STATUS_REJECTED,		 
-		// ActivityTimeStamp=timeLayOut}
-		ActivityTimeStamp:time.Now().UTC()}  
+		}  
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
    conprov.TransitStatus = STATUS_REJECTED
@@ -554,8 +548,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyDistributor(stub shim.Chaincode
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
 		Status:   STATUS_ACCEPTED,		 
-		// ActivityTimeStamp=timeLayOut}
-		ActivityTimeStamp:time.Now().UTC()}  
+		}  
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
    conprov.TransitStatus = STATUS_ACCEPTED
@@ -603,8 +596,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyDistributor(stub shim.Chaincode
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
 		Status:   STATUS_REJECTED,		 
-		// ActivityTimeStamp=timeLayOut}
-		ActivityTimeStamp:time.Now().UTC()}  
+		}  
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
    conprov.TransitStatus = STATUS_REJECTED
@@ -621,6 +613,18 @@ func (t *MedLabPharmaChaincode) RejectContainerbyDistributor(stub shim.Chaincode
 		fmt.Println(string(jsonVal))
 	setCurrentOwner(stub, receiverID, containerID)
 	return nil, nil		
+}
+
+func (t *MedLabPharmaChaincode) GetUserAttribute(stub shim.ChaincodeStubInterface, attributeName string) ([]byte, error) {
+	fmt.Println("***** Inside GetUserAttribute() func for attribute:" + attributeName)
+	attributeValue, err := stub.ReadCertAttribute(attributeName)
+	fmt.Println("attributeValue=" + string(attributeValue))
+	
+	if err != nil {
+		jsonResp := "{\"Error\":\"Failed to get GetUserAttribute\"}"
+		return nil, errors.New(jsonResp)
+	}
+	return attributeValue, nil
 }
 
 func setCurrentOwner(stub shim.ChaincodeStubInterface, ownerID string, containerID string) error {
