@@ -53,16 +53,22 @@ type Container struct {
 
 type ContainerElements struct {
 	Pallets []Pallet `json:"pallets"`
+	Health string    `json:"container_health"`
+	Remarks  string     `json:"container_remarks"`
 }
 
 type Pallet struct {
 	PalletId string `json:"pallet_id"`
 	Cases    []Case `json:"cases"`
+	Health string    `json:"pallet_health"`
+	Remarks  string     `json:"pallet_remarks"`
 }
 
 type Case struct {
 	CaseId string `json:"case_id"`
 	Units  []Unit `json:"units"`
+	Health string    `json:"case_health"`
+	Remarks  string     `json:"case_remarks"`
 }
 
 type Unit struct {
@@ -75,6 +81,9 @@ type Unit struct {
 	LotNumber    string `json:"lot_number"`
 	SaleStatus   string `json:"sale_status"`
 	ConsumerName string `json:"consumer_name"`
+	Health string    `json:"unit_health"`
+	Remarks  string     `json:"unit_remarks"`
+	GenericName string  `json:"Generic_Name"`
 }
 
 type ContainerProvenance struct {
@@ -82,12 +91,14 @@ type ContainerProvenance struct {
 	Sender        string          `json:sender`
 	Receiver      string          `json:receiver`
 	Supplychain   []ChainActivity `json:supplychain`
+	ShipmentDate   string `json:"provenance_shipmentdate"`
 }
 
 type ChainActivity struct {
 	Sender   string `json:sender`
 	Receiver string `json:receiver`
 	Status   string `json:transit_status`
+	ShipmentDate  string `json:"supplychain_shipment_date"`
 	}
 
 type ContainerOwners struct {
@@ -159,8 +170,7 @@ func (t *MedLabPharmaChaincode) Query(stub shim.ChaincodeStubInterface, function
 		return t.GetOwner(stub)
 	}else if function == "GetUserAttribute" {
 		return t.GetUserAttribute(stub, args[0])
-	}
-	
+	}	
 	fmt.Println("query did not find func: " + function)
 	return nil, errors.New("Received unknown function query: " + function)
 }
@@ -358,6 +368,17 @@ func createPallet(containerID string, palletMaxID int) []Pallet {
 	}
 	return pallets
 }
+// func validatePallet(palletID string,ShippedPalletID string) []Pallet {
+// 	pallets := make([]Pallet, 3)
+// 	for index := 0; index < 3; index++ {
+// 		strMaxID := strconv.Itoa(palletMaxID)
+// 		palletid := containerID + "-PAL" + strMaxID
+// 		pallets[index].PalletId = palletid
+// 		pallets[index].Cases = createCase(palletid)
+// 		palletMaxID++
+// 	}
+// 	return pallets
+// }
 
 func incrementCounter(stub shim.ChaincodeStubInterface) error {
 	ConMaxAsbytes, err := stub.GetState(UNIQUE_ID_COUNTER)
@@ -600,7 +621,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyDistributor(stub shim.Chaincode
 	supplychain = append(supplychain, chainActivity) 
 	conprov.Supplychain = supplychain
    conprov.TransitStatus = STATUS_REJECTED
-   conprov.Sender = shipment.Provenance.Sender//taking sender from the container to avoid inconsistency of sender from UI
+      conprov.Sender = shipment.Provenance.Sender//taking sender from the container to avoid inconsistency of sender from UI
    conprov.Receiver = receiverID
    shipment.Provenance = conprov
    jsonVal, _ := json.Marshal(shipment)
