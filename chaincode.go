@@ -370,6 +370,17 @@ func createPallet(containerID string, palletMaxID int) []Pallet {
 	}
 	return pallets
 }
+// func validatePallet(containerID string, conID string) []Pallet {
+// 	pallets := make([]Pallet, 3)
+// 	for index := 0; index < 3; index++ {
+// 		strMaxID := strconv.Itoa(palletMaxID)
+// 		palletid := containerID + "-PAL" + strMaxID
+// 		pallets[index].PalletId = palletid
+// 		pallets[index].Cases = createCase(palletid)
+// 		palletMaxID++
+// 	}
+// 	return pallets
+// }
 // func validatePallet(palletID string,ShippedPalletID string) []Pallet {
 // 	pallets := make([]Pallet, 3)
 // 	for index := 0; index < 3; index++ {
@@ -579,6 +590,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyDistributor(stub shim.Chaincode
    conprov.TransitStatus = STATUS_ACCEPTED
    conprov.Sender = shipment.Provenance.Sender//taking sender from the container to avoid inconsistency of sender from UI
    conprov.Receiver = receiverID  
+   shipment.Provenance = conprov
    jsonVal, _ := json.Marshal(shipment)
    	err = stub.PutState(containerID, jsonVal)
     if err != nil{
