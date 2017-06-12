@@ -967,7 +967,6 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 	return nil, nil		
 }
 func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStubInterface, ContainerID string) ([]byte,error) {
-	var  y int
 	fmt.Println("*****getProvenanceForContainer****** " + ContainerID)
 	valAsbytes, err := stub.GetState(ContainerID)
 	 if len(valAsbytes) == 0 {
@@ -983,7 +982,7 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 	 shipment := Container{}	  
 	 json.Unmarshal([]byte(valAsbytes), &shipment)
 	 if(len(shipment.ParentContainerId)!=0){
-		 fmt.Println("it has parent provenance to be attached")
+		 fmt.Println("It has parent provenance to be attached")
 		 fmt.Println(shipment.ParentContainerId)
 	 	 valueAsbytes, err := stub.GetState(shipment.ParentContainerId)
 	     if len(valueAsbytes) == 0 {
@@ -1017,45 +1016,13 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 	 fmt.Println(shipment.Provenance)	
 	 jsonVal, _ := json.Marshal(shipment)
    	 fmt.Println(string(jsonVal)) 
-	 return jsonVal, nil	    
-	 }else if(len(shipment.ChildContainerId)!=0){
-         fmt.Println("It has Child provenance to be attached")
-		 fmt.Println(shipment.ChildContainerId)
-	   for y=0; y < len(shipment.ChildContainerId); y++ {	  	  
-	 	    vallAsbytes, err := stub.GetState(shipment.ChildContainerId[y])
-	         if len(vallAsbytes) == 0 {
-		 	    jsonResp := "{\"Error\":\"Failed to get state for child Container id for the corresponding parent container \"}"
-		        return nil, errors.New(jsonResp)
-	            }
-	         fmt.Println("*******json value from the child container****************")
-	         fmt.Println(vallAsbytes)
-	         if err != nil{
-		        jsonResp := "{\"Error\":\"Failed to get state for child Container id \"}"
-		        return nil, errors.New(jsonResp)
-	           }
-			 childshipment := Container{}
-	        json.Unmarshal([]byte(vallAsbytes), &childshipment)
-	        fmt.Println("Am Printing container shipment provenance")
-	        fmt.Println(shipment.Provenance)
-	        conprov := shipment.Provenance  
-            supplychain := conprov.Supplychain     
-	        chainActivity := ChainActivity{
-	        Sender:  childshipment.Provenance.Sender ,
-	       Receiver: childshipment.Provenance.Receiver,
-	        Status:  STATUS_SHIPPED_BY_DISTRIBUTOR,		 
-		   }  
-	       supplychain = append(supplychain, chainActivity) 
-	       conprov.Supplychain = supplychain
-           conprov.TransitStatus = STATUS_SHIPPED_BY_DISTRIBUTOR
-           conprov.Sender = childshipment.Provenance.Sender//taking sender from the container to avoid inconsistency of sender from UI
-           conprov.Receiver = childshipment.Provenance.Receiver 
-           shipment.Provenance = conprov
-	       fmt.Println("Am Printing child shipment provenance")
-	       fmt.Println(shipment.Provenance)	
-	       jsonVal, _ := json.Marshal(shipment)
-   	       fmt.Println(string(jsonVal))    
-            return jsonVal, nil
-	     }	   
+	  return jsonVal, nil	 	    
+	 }else{
+     fmt.Println("Am Printing the parent shipment provenance")
+	 fmt.Println(shipment.Provenance)	
+	 jsonVal, _ := json.Marshal(shipment)
+   	 fmt.Println(string(jsonVal)) 
+	  return jsonVal, nil		
 	 }
 	return nil,nil
 }
