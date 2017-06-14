@@ -781,7 +781,7 @@ func (t *MedLabPharmaChaincode) GetOwner(stub shim.ChaincodeStubInterface) ([]by
 	}
 	return ConMaxAsbytes, nil
 }
-func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string,shipmentDate string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string,date string) ([]byte, error) {
 
 	fmt.Println("Accepting the  container by Logistics:" + logisticsID)
 	fmt.Println("Accepting the  container by Logistics:" + containerID)
@@ -801,14 +801,14 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 	json.Unmarshal([]byte(valAsbytes), &shipment)
 	shipment.Recipient = receiverID
 	shipment.Remarks=remarks
+	shipment.ReceivedDate=date
 	conprov := shipment.Provenance  
     supplychain := conprov.Supplychain     
 	chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
 		Remarks: remarks,
-		ShipmentDate :shipmentDate,
-
+		ShipmentDate :date,
 		Status:   STATUS_ACCEPTED_BY_LOGISTICS,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -828,7 +828,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 	setCurrentOwner(stub, logisticsID, containerID)
 	return nil, nil		
 }
-func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string,shipmentDate string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string,date string) ([]byte, error) {
 
 	fmt.Println("Rejecting the  container by Logistics:" + logisticsID + containerID)
      valAsbytes, err := stub.GetState(containerID)
@@ -852,12 +852,13 @@ func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeSt
 	json.Unmarshal([]byte(valAsbytes), &shipment)
 	shipment.Recipient = receiverID
 	shipment.Remarks = remarks
+	shipment.ReceivedDate = date
 	conprov := shipment.Provenance  
     supplychain := conprov.Supplychain     
 	chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
-		ShipmentDate :shipmentDate,
+		ShipmentDate :date,
 		Remarks: remarks,
 		Status:   STATUS_REJECTED_BY_LOGISTICS,		 
 		}  
@@ -879,7 +880,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeSt
 	return nil, nil		
 }
 
-func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string,elementsJSON string,shipmentDate string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string,elementsJSON string,date string) ([]byte, error) {
     var m int
 	var count int=0
     fmt.Println("Running UpdateContainerbyDistributor ")
@@ -933,12 +934,13 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 		shipment.Elements.Pallets=updatedpallets
 	    shipment.Recipient = receiverID
 		shipment.Remarks=remarks
+		shipment.ReceivedDate=date
 	    conprov := shipment.Provenance  
         supplychain := conprov.Supplychain     
 	    chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
-		ShipmentDate :shipmentDate,
+		ShipmentDate :date,
 		Remarks: remarks,
 		Status:   STATUS_ACCEPTED_BY_DISTRIBUTOR,		 
 		}  
@@ -951,12 +953,14 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 	}else if (shipment.Elements.Health=="Partially Healthy"){
 		shipment.Elements.Pallets=updatedpallets
 	    shipment.Recipient = receiverID
+		shipment.Remarks=remarks
+		shipment.ReceivedDate=date
 	    conprov := shipment.Provenance  
         supplychain := conprov.Supplychain     
 	    chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
-		ShipmentDate :shipmentDate,
+		ShipmentDate :date,
 		Remarks: remarks,
 		Status:   STATUS_PARTIALLY_ACCEPTED_BY_DISTRIBUTOR,		 
 		}  
@@ -969,12 +973,14 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 	}else if (shipment.Elements.Health=="UnHealthy"){
 		shipment.Elements.Pallets=updatedpallets
 	    shipment.Recipient = receiverID
+		shipment.Remarks=remarks
+		shipment.ReceivedDate=date
 	    conprov := shipment.Provenance  
         supplychain := conprov.Supplychain     
 	    chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
-		ShipmentDate :shipmentDate,
+		ShipmentDate :date,
 		Remarks: remarks,
 		Status:   STATUS_REJECTED_BY_DISTRIBUTOR,		 
 		}  
@@ -1155,7 +1161,7 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 	   }
 	return nil,nil
 }
-func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string,shipmentDate string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string,date string) ([]byte, error) {
 
 	fmt.Println("Accepting the  container by Retailer:" + containerID)
      valAsbytes, err := stub.GetState(containerID)
@@ -1173,12 +1179,13 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStu
 	json.Unmarshal([]byte(valAsbytes), &shipment)
 	shipment.Recipient = receiverID
 	shipment.Remarks=remarks
+	shipment.ReceivedDate=date
 	conprov := shipment.Provenance  
     supplychain := conprov.Supplychain     
 	chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
-		ShipmentDate :shipmentDate,
+		ShipmentDate :date,
 		Remarks: remarks,
 		Status:   STATUS_ACCEPTED_BY_RETAILER,		 
 		}  
