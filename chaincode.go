@@ -107,6 +107,7 @@ type ChainActivity struct {
 	Receiver string `json:receiver`
 	Status   string `json:transit_status`
 	ShipmentDate  string `json:"date"`
+	Remarks   string  `json:remarks`
 	}
 
 type ContainerOwners struct {
@@ -277,6 +278,7 @@ func (t *MedLabPharmaChaincode)DispatchContainer(stub shim.ChaincodeStubInterfac
 		Sender:   shipment.Provenance.Receiver,//
 		Receiver: receiverID,
 		ShipmentDate :shipmentDate,
+		Remarks: remarks,
 		Status:   STATUS_DISPATCHED_BY_LOGISTICS ,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -364,7 +366,9 @@ func ShipContainerUsingLogistics_Internal(senderID string,
 		Sender:   senderID,
 		Receiver: logisticsID,
 		Status:   STATUS_SHIPPED,
-		ShipmentDate :shipmentDate}
+		Remarks: remarks,
+		ShipmentDate :shipmentDate,
+		}
 		var supplyChain []ChainActivity
 	supplyChain = append(supplyChain, chainActivity)
 	conprov := ContainerProvenance{
@@ -802,7 +806,9 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 	chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
+		Remarks: remarks,
 		ShipmentDate :shipmentDate,
+
 		Status:   STATUS_ACCEPTED_BY_LOGISTICS,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -852,6 +858,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeSt
 		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
 		ShipmentDate :shipmentDate,
+		Remarks: remarks,
 		Status:   STATUS_REJECTED_BY_LOGISTICS,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -932,6 +939,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
 		ShipmentDate :shipmentDate,
+		Remarks: remarks,
 		Status:   STATUS_ACCEPTED_BY_DISTRIBUTOR,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -949,6 +957,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
 		ShipmentDate :shipmentDate,
+		Remarks: remarks,
 		Status:   STATUS_PARTIALLY_ACCEPTED_BY_DISTRIBUTOR,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -966,6 +975,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
 		ShipmentDate :shipmentDate,
+		Remarks: remarks,
 		Status:   STATUS_REJECTED_BY_DISTRIBUTOR,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -1104,6 +1114,7 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 		            Sender:   shipment.Provenance.Receiver,
 		            Receiver: receiverID,
 					ShipmentDate :shipmentDate,
+					Remarks: remarks,
 		            Status:   STATUS_SHIPPED_BY_DISTRIBUTOR,
 		     }
 		        var supplyChain []ChainActivity
@@ -1168,6 +1179,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStu
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
 		ShipmentDate :shipmentDate,
+		Remarks: remarks,
 		Status:   STATUS_ACCEPTED_BY_RETAILER,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
