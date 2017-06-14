@@ -145,35 +145,35 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
 	user_byte,_ := t.GetUserAttribute(stub,"user_type")
 		user_type := string(user_byte)
 		if function == "ShipContainerUsingLogistics" {
-		   if (user_type =="manufacturer"){
-		     return t.ShipContainerUsingLogistics(stub, args[0], args[1], args[2], args[3], args[4])
+		   if (user_type =="logistics"){
+		     return t.ShipContainerUsingLogistics(stub, args[0], args[1], args[2], args[3], args[4],args[5])
 		   }
 	} else if function == "AcceptContainerbyLogistics"{
 		  if (user_type =="logistics"){
-			  return t.AcceptContainerbyLogistics(stub, args[0], args[1],args[2], args[3])
+			  return t.AcceptContainerbyLogistics(stub, args[0], args[1],args[2], args[3],args[4])
 		  }	  
 	}else if function == "DispatchContainer"{
 		  if (user_type =="logistics"){
                return t.DispatchContainer(stub, args[0], args[1],args[2],args[3])	
 		  } 	  		
 	}else if function == "UpdateContainerbyDistributor"{
-		if (user_type =="distributor"){
-		         return t.UpdateContainerbyDistributor(stub, args[0], args[1],args[2],args[3])		
+		if (user_type =="logistics"){
+		         return t.UpdateContainerbyDistributor(stub, args[0], args[1],args[2],args[3],args[4])		
 		}		   
 	}else if function == "RejectContainerbyLogistics"{
 		  if (user_type =="logistics"){
-           	return t.RejectContainerbyLogistics(stub, args[0], args[1],args[2],args[3]) 
+           	return t.RejectContainerbyLogistics(stub, args[0], args[1],args[2],args[3],args[4]) 
 		}
 	}else if function == "repackagingContainerbyDistributor"{
-		if (user_type =="distributor"){
-		         return t.repackagingContainerbyDistributor(stub, args[0],args[1], args[2],args[3],args[4])		
+		if (user_type =="logistics"){
+		         return t.repackagingContainerbyDistributor(stub, args[0],args[1], args[2],args[3],args[4],args[5])		
 		}		   
 	}else if function == "AcceptContainerbyRetailer"{
-		if (user_type =="retailer"){
-		         return t.AcceptContainerbyRetailer(stub, args[0],args[1], args[2])		
+		if (user_type =="logistics"){
+		         return t.AcceptContainerbyRetailer(stub, args[0],args[1], args[2],args[3])		
 		}		   
 	}else if function == "SellingbyRetailer"{
-		if (user_type =="retailer"){
+		if (user_type =="logistics"){
 		         return t.SellingbyRetailer(stub, args[0],args[1], args[2],args[3])		
 		}		   
 	}		 
@@ -222,7 +222,7 @@ func (t *MedLabPharmaChaincode) init(stub shim.ChaincodeStubInterface, args []st
 
 // write - invoke function to write key/value pair
 func (t *MedLabPharmaChaincode) ShipContainerUsingLogistics(stub shim.ChaincodeStubInterface,
-	senderID string, logisticsID string, receiverID string, remarks string, elementsJSON string) ([]byte, error) {
+	senderID string, logisticsID string, receiverID string, remarks string, elementsJSON string,shipmentDate string) ([]byte, error) {
 	var err error
 	var containerId string
 	shipment := Container{}
@@ -232,7 +232,7 @@ func (t *MedLabPharmaChaincode) ShipContainerUsingLogistics(stub shim.ChaincodeS
 	fmt.Println(string(valueAsbytes))	
 	if(len(valueAsbytes)==0){
 		fmt.Println("Validating duplicate containerID" + containerId)
-		containerID, jsonValue := ShipContainerUsingLogistics_Internal(senderID, logisticsID, receiverID, remarks, elementsJSON)
+		containerID, jsonValue := ShipContainerUsingLogistics_Internal(senderID, logisticsID, receiverID, remarks, elementsJSON,shipmentDate)
 	    fmt.Println("running ShipContainerUsingLogistics.key:" + containerID)
 	    fmt.Println(string(jsonValue))
 	    valAsbytes, err := stub.GetState(containerID)
@@ -285,7 +285,7 @@ func (t *MedLabPharmaChaincode)DispatchContainer(stub shim.ChaincodeStubInterfac
    conprov.Sender = shipment.Provenance.Receiver
    conprov.Receiver = receiverID
    shipment.Provenance = conprov
-    shipment.Provenance.ShipmentDate=shipmentDate
+    shipment.ShipmentDate=shipmentDate
     jsonVal, _ := json.Marshal(shipment)
    	err = stub.PutState(containerID, jsonVal)//write the variable into the chaincode state
     if err != nil{
@@ -357,12 +357,14 @@ func (t *MedLabPharmaChaincode) GetEmptyContainer(stub shim.ChaincodeStubInterfa
 }
 
 func ShipContainerUsingLogistics_Internal(senderID string,
-	logisticsID string, receiverID string, remarks string, elementsJSON string) (string, []byte) {
+	logisticsID string, receiverID string, remarks string, elementsJSON string,shipmentDate string) (string, []byte) {
+		shipment := Container{}
+	json.Unmarshal([]byte(elementsJSON), &shipment)
 		chainActivity := ChainActivity{
 		Sender:   senderID,
 		Receiver: logisticsID,
 		Status:   STATUS_SHIPPED,
-		}
+		ShipmentDate :shipmentDate}
 		var supplyChain []ChainActivity
 	supplyChain = append(supplyChain, chainActivity)
 	conprov := ContainerProvenance{
@@ -370,9 +372,8 @@ func ShipContainerUsingLogistics_Internal(senderID string,
 		Sender:        senderID,
 		Receiver:      logisticsID,
 		Supplychain:   supplyChain}
-	shipment := Container{}
-	json.Unmarshal([]byte(elementsJSON), &shipment)
 	shipment.Recipient = receiverID
+	shipment.ShipmentDate = shipmentDate
 	shipment.Provenance = conprov
 	shipment.Remarks = remarks
 	jsonVal, _ := json.Marshal(shipment)
@@ -776,7 +777,7 @@ func (t *MedLabPharmaChaincode) GetOwner(stub shim.ChaincodeStubInterface) ([]by
 	}
 	return ConMaxAsbytes, nil
 }
-func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string,shipmentDate string) ([]byte, error) {
 
 	fmt.Println("Accepting the  container by Logistics:" + logisticsID)
 	fmt.Println("Accepting the  container by Logistics:" + containerID)
@@ -801,6 +802,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 	chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
+		ShipmentDate :shipmentDate,
 		Status:   STATUS_ACCEPTED_BY_LOGISTICS,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -820,7 +822,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyLogistics(stub shim.ChaincodeSt
 	setCurrentOwner(stub, logisticsID, containerID)
 	return nil, nil		
 }
-func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeStubInterface,containerID string, logisticsID string, receiverID string, remarks string,shipmentDate string) ([]byte, error) {
 
 	fmt.Println("Rejecting the  container by Logistics:" + logisticsID + containerID)
      valAsbytes, err := stub.GetState(containerID)
@@ -849,6 +851,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeSt
 	chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: logisticsID,
+		ShipmentDate :shipmentDate,
 		Status:   STATUS_REJECTED_BY_LOGISTICS,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -869,7 +872,7 @@ func (t *MedLabPharmaChaincode) RejectContainerbyLogistics(stub shim.ChaincodeSt
 	return nil, nil		
 }
 
-func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string,elementsJSON string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string,elementsJSON string,shipmentDate string) ([]byte, error) {
     var m int
 	var count int=0
     fmt.Println("Running UpdateContainerbyDistributor ")
@@ -928,6 +931,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 	    chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
+		ShipmentDate :shipmentDate,
 		Status:   STATUS_ACCEPTED_BY_DISTRIBUTOR,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -944,6 +948,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 	    chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
+		ShipmentDate :shipmentDate,
 		Status:   STATUS_PARTIALLY_ACCEPTED_BY_DISTRIBUTOR,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -960,6 +965,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 	    chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
+		ShipmentDate :shipmentDate,
 		Status:   STATUS_REJECTED_BY_DISTRIBUTOR,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
@@ -1042,7 +1048,7 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 	return nil,nil
 }
 
-func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.ChaincodeStubInterface,childContainerID string,containerID, receiverID string, remarks string,elementsJSON string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.ChaincodeStubInterface,childContainerID string,containerID, receiverID string, remarks string,elementsJSON string,shipmentDate string) ([]byte, error) {
 	fmt.Println("Repackaging Container by Distributor:" + childContainerID)
     valAsbytes, err := stub.GetState(containerID)
 	 if len(valAsbytes) == 0 {
@@ -1097,6 +1103,7 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 	                chainActivity := ChainActivity{
 		            Sender:   shipment.Provenance.Receiver,
 		            Receiver: receiverID,
+					ShipmentDate :shipmentDate,
 		            Status:   STATUS_SHIPPED_BY_DISTRIBUTOR,
 		     }
 		        var supplyChain []ChainActivity
@@ -1108,6 +1115,7 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 		        Supplychain:   supplyChain}
 		        conprov.Receiver = receiverID  
                 shipment.Provenance = conprov
+				shipment.ShipmentDate = shipmentDate
 	            shipment.Remarks=remarks
 	         }else{
 		           fmt.Println("Repackaging is done only for accepted pallets")
@@ -1136,7 +1144,7 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 	   }
 	return nil,nil
 }
-func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string,shipmentDate string) ([]byte, error) {
 
 	fmt.Println("Accepting the  container by Retailer:" + containerID)
      valAsbytes, err := stub.GetState(containerID)
@@ -1159,6 +1167,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStu
 	chainActivity := ChainActivity{
 		Sender:   shipment.Provenance.Sender,
 		Receiver: receiverID,
+		ShipmentDate :shipmentDate,
 		Status:   STATUS_ACCEPTED_BY_RETAILER,		 
 		}  
 	supplychain = append(supplychain, chainActivity) 
