@@ -1048,7 +1048,7 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 	return nil,nil
 }
 
-func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.ChaincodeStubInterface,childContainerID string,containerID, receiverID string, remarks string,elementsJSON string,shipmentDate string) ([]byte, error) {
+func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.ChaincodeStubInterface,childContainerID string,containerID string, receiverID string, remarks string,elementsJSON string,shipmentDate string) ([]byte, error) {
 	fmt.Println("Repackaging Container by Distributor:" + childContainerID)
     valAsbytes, err := stub.GetState(containerID)
 	 if len(valAsbytes) == 0 {
