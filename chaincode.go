@@ -146,7 +146,7 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
 	user_byte,_ := t.GetUserAttribute(stub,"user_type")
 		user_type := string(user_byte)
 		if function == "ShipContainerUsingLogistics" {
-		   if (user_type =="manufacturer"){
+		   if (user_type =="logistics"){
 		     return t.ShipContainerUsingLogistics(stub, args[0], args[1], args[2], args[3], args[4],args[5])
 		   }
 	} else if function == "AcceptContainerbyLogistics"{
@@ -158,7 +158,7 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
                return t.DispatchContainer(stub, args[0], args[1],args[2],args[3])	
 		  } 	  		
 	}else if function == "UpdateContainerbyDistributor"{
-		if (user_type =="distributor"){
+		if (user_type =="logistics"){
 		         return t.UpdateContainerbyDistributor(stub, args[0], args[1],args[2],args[3],args[4])		
 		}		   
 	}else if function == "RejectContainerbyLogistics"{
@@ -166,15 +166,15 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
            	return t.RejectContainerbyLogistics(stub, args[0], args[1],args[2],args[3],args[4]) 
 		}
 	}else if function == "repackagingContainerbyDistributor"{
-		if (user_type =="distributor"){
+		if (user_type =="logistics"){
 		         return t.repackagingContainerbyDistributor(stub, args[0],args[1], args[2],args[3],args[4],args[5])		
 		}		   
 	}else if function == "AcceptContainerbyRetailer"{
-		if (user_type =="retailer"){
+		if (user_type =="logistics"){
 		         return t.AcceptContainerbyRetailer(stub, args[0],args[1], args[2],args[3])		
 		}		   
 	}else if function == "SellingbyRetailer"{
-		if (user_type =="retailer"){
+		if (user_type =="logistics"){
 		         return t.SellingbyRetailer(stub, args[0],args[1], args[2],args[3])		
 		}		   
 	}		 
@@ -504,12 +504,13 @@ func validatePallet(shippedpallets []Pallet,dispatchedpallets []Pallet)([]Pallet
 		      return nil, errors.New(jsonResp)
 	      }  		
 }
-func repackagedPallets(parentContainerId string,childContainerID string,dispatchedpallets []Pallet)([]Pallet, error) {
+func repackagedPallets(parentContainerId string,childContainerID string,dispatchedpallets []Pallet)([]Pallet, error,bool) {
 	var u int
 	var find bool
+	var find1 bool=true
 	fmt.Println("Am in repackagedPallets")
 	for u=0; u < len(dispatchedpallets); u++ {	
-		if(dispatchedpallets[u].Health==""){
+		if(dispatchedpallets[u].Health=="Healthy"){
 		        find = strings.Contains(dispatchedpallets[u].PalletId,parentContainerId)
 		        fmt.Println(dispatchedpallets[u].PalletId)
 		        fmt.Println(parentContainerId)
@@ -524,20 +525,23 @@ func repackagedPallets(parentContainerId string,childContainerID string,dispatch
 					 fmt.Println("match not found for container id")
 				 }
 	          }else{
-		            fmt.Println("Unhealthy pacllets cannot be repackaged")
+				    find1=false
+		            fmt.Println("Unhealthy pallets cannot be repackaged")
+					jsonResp := "{\"Error\":\"Unhealthy pallets cannot be repackaged\"}"
+		            return nil, errors.New(jsonResp),find1
 	               }
 	} 	
 	fmt.Println(parentContainerId)
 	fmt.Println(childContainerID)
 	fmt.Println(dispatchedpallets)
-	return dispatchedpallets,nil
+	return dispatchedpallets,nil,find1
 }
 func repackagedCases(parentContainerId string,childContainerID string,dispatchedCases []Case)([]Case, error) {
 	var v int
 	var find bool
 	fmt.Println("Am in repackagedCases")
 	for v=0; v < len(dispatchedCases); v++ {	
-	      if(dispatchedCases[v].Health=="")	{
+	      if(dispatchedCases[v].Health=="Healthy")	{
 		       find = strings.Contains(dispatchedCases[v].CaseId,parentContainerId)
 		       fmt.Println(dispatchedCases[v].CaseId)
 		       fmt.Println(parentContainerId)
@@ -565,7 +569,7 @@ func repackagedUnits(parentContainerId string,childContainerID string,dispatched
 	var find bool
 	fmt.Println("Am in repackagedUnits")
 	for w=0; w < len(dispatchedUnits); w++ {	
-	      if(dispatchedUnits[w].Health=="")	{
+	      if(dispatchedUnits[w].Health=="Healthy")	{
 		       find = strings.Contains(dispatchedUnits[w].UnitId,parentContainerId)
 		       fmt.Println(dispatchedUnits[w].UnitId)
 		       fmt.Println(parentContainerId)
@@ -1065,6 +1069,7 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 }
 
 func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.ChaincodeStubInterface,childContainerID string,containerID string, receiverID string, remarks string,elementsJSON string,shipmentDate string) ([]byte, error) {
+	//var find2 bool=true
 	fmt.Println("Repackaging Container by Distributor:" + childContainerID)
     valAsbytes, err := stub.GetState(containerID)
 	 if len(valAsbytes) == 0 {
@@ -1110,7 +1115,9 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 		           jsonResp := "{\"Error\":\"Failed to put state for parent Container id after updating the childcontainerid\"}"
 		           return nil, errors.New(jsonResp)
 	               }
-	        repackagedpallets,_ :=repackagedPallets(shipment.ParentContainerId,childContainerID,acceptedPallets)
+	        repackagedpallets,_,find2:=repackagedPallets(shipment.ParentContainerId,childContainerID,acceptedPallets)
+			fmt.Println(find2)
+            if(find2){
 		    fmt.Println("am printing repackaged pallets after Validating")
 	        fmt.Println(repackagedpallets)
 			fmt.Println("Am printing container health now")
@@ -1134,8 +1141,11 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
                 shipment.Provenance = conprov
 				shipment.ShipmentDate = shipmentDate
 	            shipment.Remarks=remarks
-	         }else{
+		   }
+			 }else{
 		           fmt.Println("Repackaging is done only for accepted pallets")
+				   jsonResp := "{\"Error\":\"Repackaging is done only for accepted pallets \"}"
+		           return nil, errors.New(jsonResp)				   
 	        }	
 	       jsonVal, _ := json.Marshal(shipment)
    	       err = stub.PutState(childContainerID, jsonVal)
@@ -1154,6 +1164,7 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 	setCurrentOwner(stub, shipment.Provenance.Sender, childContainerID)
 	setCurrentOwner(stub, receiverID, childContainerID)
 	return jsonVal, nil		
+	
 	}else{
 		   fmt.Println("No such parent container exists")
 		    jsonResp := "{\"Error\":\"No such parent container exists and hence repackage cannot be done \"}"
