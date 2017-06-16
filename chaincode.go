@@ -504,33 +504,49 @@ func validatePallet(shippedpallets []Pallet,dispatchedpallets []Pallet)([]Pallet
 		      return nil, errors.New(jsonResp)
 	      }  		
 }
-func repackagedPallets(parentContainerId string,childContainerID string,dispatchedpallets []Pallet)([]Pallet, error,bool) {
-	var u int
+func repackagedPallets(parentContainerId string,childContainerID string,acceptedpallets []Pallet,dispatchedpallets []Pallet)([]Pallet, error,bool) {
+	var u,k int
 	var find bool
 	var find1 bool=true
 	fmt.Println("Am in repackagedPallets")
-	for u=0; u < len(dispatchedpallets); u++ {	
-		if(dispatchedpallets[u].Health=="Healthy"){
-		        find = strings.Contains(dispatchedpallets[u].PalletId,parentContainerId)
-		        fmt.Println(dispatchedpallets[u].PalletId)
-		        fmt.Println(parentContainerId)
-		        fmt.Println("Am printing the value of finds in repackagedpallets")
-		        fmt.Println(find)
-		        if(find){
-                    dispatchedpallets[u].PalletId=strings.Replace(dispatchedpallets[u].PalletId, parentContainerId+"-", childContainerID+"-", -1)
-		   	        repackagedCases,_:=repackagedCases(parentContainerId,childContainerID,dispatchedpallets[u].Cases)
-				    fmt.Println("Cases after repackaging")
-                    fmt.Println(repackagedCases)
-				 } else{
-					 fmt.Println("match not found for container id")
-				 }
-	          }else{
-				    find1=false
-		            fmt.Println("Unhealthy pallets cannot be repackaged")
-					jsonResp := "{\"Error\":\"Unhealthy pallets cannot be repackaged\"}"
-		            return nil, errors.New(jsonResp),find1
-	               }
-	} 	
+	fmt.Println("dispatchedpallets")
+	fmt.Println(dispatchedpallets)
+	fmt.Println("acceptedpallets")
+	fmt.Println(acceptedpallets)
+    for	k=0;k<len(acceptedpallets);k++{
+	       fmt.Println("checking if All the pallets in the parent conatiner are not repackaged in this child container")
+           for u=0; u < len(dispatchedpallets); u++ {	
+                  if(dispatchedpallets[u].Health=="Healthy"){	  	
+	                     if(acceptedpallets[k].PalletId==dispatchedpallets[u].PalletId){
+		                       fmt.Println(acceptedpallets[k].PalletId)
+		                       fmt.Println(dispatchedpallets[u].PalletId)	   
+		                       find = strings.Contains(dispatchedpallets[u].PalletId,parentContainerId)
+		                       fmt.Println(dispatchedpallets[u].PalletId)
+							   fmt.Println(parentContainerId)
+		                       fmt.Println("Am printing the value of finds in repackagedpallets")
+		                       fmt.Println(find)
+		                       if(find){
+                                   dispatchedpallets[u].PalletId=strings.Replace(dispatchedpallets[u].PalletId, parentContainerId+"-", childContainerID+"-", -1)
+					               fmt.Println("after replacing it with the child container")
+					               fmt.Println(dispatchedpallets[u].PalletId)
+					               fmt.Println(acceptedpallets[k].PalletId)
+		   	                       repackagedCases,_:=repackagedCases(parentContainerId,childContainerID,dispatchedpallets[u].Cases)
+				                   fmt.Println("Cases after repackaging")
+                                   fmt.Println(repackagedCases)
+				                   } else{
+					                      fmt.Println("match not found for container id")
+				                          }
+	                     }else{
+							     fmt.Println("PalletIds doesnot match")
+				                 
+	                            }
+	               }else{
+                             find1=false
+		                     fmt.Println("Unhealthy pallets cannot be repackaged")
+							 return nil,nil,find1
+		                  }
+	          } 
+     }	
 	fmt.Println(parentContainerId)
 	fmt.Println(childContainerID)
 	fmt.Println(dispatchedpallets)
@@ -541,7 +557,6 @@ func repackagedCases(parentContainerId string,childContainerID string,dispatched
 	var find bool
 	fmt.Println("Am in repackagedCases")
 	for v=0; v < len(dispatchedCases); v++ {	
-	      if(dispatchedCases[v].Health=="Healthy")	{
 		       find = strings.Contains(dispatchedCases[v].CaseId,parentContainerId)
 		       fmt.Println(dispatchedCases[v].CaseId)
 		       fmt.Println(parentContainerId)
@@ -555,9 +570,6 @@ func repackagedCases(parentContainerId string,childContainerID string,dispatched
 				} else{
 					 fmt.Println("match not found for parent containerid")
 				     }
-	          }else{
-		         fmt.Println("Unhealthy Cases cannot be repackaged")
-	           }
 	} 	
 	fmt.Println(parentContainerId)
 	fmt.Println(childContainerID)
@@ -569,7 +581,7 @@ func repackagedUnits(parentContainerId string,childContainerID string,dispatched
 	var find bool
 	fmt.Println("Am in repackagedUnits")
 	for w=0; w < len(dispatchedUnits); w++ {	
-	      if(dispatchedUnits[w].Health=="Healthy")	{
+	     
 		       find = strings.Contains(dispatchedUnits[w].UnitId,parentContainerId)
 		       fmt.Println(dispatchedUnits[w].UnitId)
 		       fmt.Println(parentContainerId)
@@ -580,9 +592,6 @@ func repackagedUnits(parentContainerId string,childContainerID string,dispatched
 			   } else{
 					 fmt.Println("match not found for parent containerid")
 				 }
-	          }else{
-		         fmt.Println("Unhealthy Units cannot be repackaged")
-	           }
 	} 	
 	fmt.Println(parentContainerId)
 	fmt.Println(childContainerID)
@@ -917,25 +926,16 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 	 fmt.Println( dispatchedpallets)
 	 fmt.Println("ending")
 	 for m=0; m < len(updatedpallets); m++ {
-		 fmt.Println("Am in update container by distributor!!!!!!!!!!!!!!!!")
-		 if(updatedpallets[m].Health=="Unhealthy"){
-		 count++
-			fmt.Println("Am in update container by distributor")
+		 fmt.Println("Am in update container by distributor and updating the container health")
+		 if(updatedpallets[m].Health=="UnHealthy"){
+		     count++
 		}
+	 }	
 		fmt.Println(count)
-		    if(count==0){
+	 if(count==0){
 			shipment.Elements.Health="Healthy"
 			fmt.Println("Am in update container by distributor and updated as healthy")
-		   }else if (count==1){            
-			shipment.Elements.Health="PartialHealthy"
-			fmt.Println("Am in update container by distributor and updated as PartialHealthy")
-		}else if (count==2){         
-			shipment.Elements.Health="UnHealthy"
-			fmt.Println("Am in update container by distributor and updated as UnHealthy") 
-		   }
-	}
-	if (shipment.Elements.Health=="Healthy"){
-		shipment.Elements.Pallets=updatedpallets
+			shipment.Elements.Pallets=updatedpallets
 	    shipment.Recipient = receiverID
 		shipment.Remarks=remarks
 		shipment.ReceivedDate=date
@@ -954,8 +954,11 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
     conprov.Sender = shipment.Provenance.Sender//taking sender from the container to avoid inconsistency of sender from UI
     conprov.Receiver = receiverID  
     shipment.Provenance = conprov
-	}else if (shipment.Elements.Health=="Partially Healthy"){
-		shipment.Elements.Pallets=updatedpallets
+	
+		   }else if (count==1){            
+			shipment.Elements.Health="PartialHealthy"
+			fmt.Println("Am in update container by distributor and updated as PartialHealthy")
+			shipment.Elements.Pallets=updatedpallets
 	    shipment.Recipient = receiverID
 		shipment.Remarks=remarks
 		shipment.ReceivedDate=date
@@ -974,8 +977,11 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
     conprov.Sender = shipment.Provenance.Sender//taking sender from the container to avoid inconsistency of sender from UI
     conprov.Receiver = receiverID  
     shipment.Provenance = conprov
-	}else if (shipment.Elements.Health=="UnHealthy"){
-		shipment.Elements.Pallets=updatedpallets
+	fmt.Println(shipment.Provenance)			
+		}else if (count==2){         
+			shipment.Elements.Health="UnHealthy"
+			fmt.Println("Am in update container by distributor and updated as UnHealthy") 
+			shipment.Elements.Pallets=updatedpallets
 	    shipment.Recipient = receiverID
 		shipment.Remarks=remarks
 		shipment.ReceivedDate=date
@@ -994,7 +1000,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
     conprov.Sender = shipment.Provenance.Sender//taking sender from the container to avoid inconsistency of sender from UI
     conprov.Receiver = receiverID  
     shipment.Provenance = conprov
-	}		
+		   }	
    jsonVal, _ := json.Marshal(shipment)
    	err = stub.PutState(containerID, jsonVal)
     if err != nil{
@@ -1007,6 +1013,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 	return nil, nil		
 }
 func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStubInterface, ContainerID string) ([]byte,error) {
+	var m int
 	fmt.Println("*****getProvenanceForContainer****** " + ContainerID)
 	valAsbytes, err := stub.GetState(ContainerID)
 	 if len(valAsbytes) == 0 {
@@ -1039,21 +1046,20 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 	 json.Unmarshal([]byte(valueAsbytes), &parentshipment)
 	 fmt.Println("Am Printing Parent shipment provenance")
 	 fmt.Println(parentshipment.Provenance)
-	 conprov := parentshipment.Provenance  
-     supplychain := conprov.Supplychain     
-	 chainActivity := ChainActivity{
-	 Sender:  shipment.Provenance.Sender ,
-	 Receiver: shipment.Provenance.Receiver,
-	 Status:  STATUS_SHIPPED_BY_DISTRIBUTOR,		 
-		}  
-	supplychain = append(supplychain, chainActivity) 
-	conprov.Supplychain = supplychain
-    conprov.TransitStatus = STATUS_SHIPPED_BY_DISTRIBUTOR
-    conprov.Sender = shipment.Provenance.Sender//taking sender from the container to avoid inconsistency of sender from UI
-    conprov.Receiver = shipment.Provenance.Receiver  
-    shipment.Provenance = conprov
-	//shipment.Remarks=remarks
-	fmt.Println("Am Printing child shipment provenance")
+	 parentConProv := parentshipment.Provenance 
+     parentSupplyChain := parentConProv.Supplychain 
+	  childprov:=shipment.Provenance
+	 for m=0; m < len(childprov.Supplychain); m++ {
+	       parentSupplyChain=append(parentSupplyChain, childprov.Supplychain[m])
+	 }
+	  childsupplychain:=parentSupplyChain
+	  childprov.Supplychain=childsupplychain
+	  fmt.Println("new conprov")
+      fmt.Println(childprov)
+	  fmt.Println("ending conprov")
+	  fmt.Println(parentSupplyChain) 
+      shipment.Provenance=childprov
+ 	fmt.Println("Am Printing child shipment provenance")
 	 fmt.Println(shipment.Provenance)	
 	 jsonVal, _ := json.Marshal(shipment)
    	 fmt.Println(string(jsonVal)) 
@@ -1069,61 +1075,61 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 }
 
 func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.ChaincodeStubInterface,childContainerID string,containerID string, receiverID string, remarks string,elementsJSON string,shipmentDate string) ([]byte, error) {
-	//var find2 bool=true
-	fmt.Println("Repackaging Container by Distributor:" + childContainerID)
-    valAsbytes, err := stub.GetState(containerID)
-	 if len(valAsbytes) == 0 {
-		 	jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
-		    return nil, errors.New(jsonResp)
-	 }
-	 fmt.Println("json value from the container****************")
-	 fmt.Println(valAsbytes)
-	 if err != nil{
-		 jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
-		 return nil, errors.New(jsonResp)
-	 }		
+	 var m int
+	 var count int=0
+	 fmt.Println("Repackaging Container by Distributor:" + childContainerID)
+	 valuAsbytes, err := stub.GetState(containerID)
 	 shipment := Container{}	  
-	 json.Unmarshal([]byte(valAsbytes), &shipment)
-	 acceptedPallets :=shipment.Elements.Pallets
-	 fmt.Println(shipment.Provenance.Receiver)
-	 updatedJSON :=Container{}
-	 shipment.ParentContainerId=containerID
-	 json.Unmarshal([]byte(elementsJSON), &updatedJSON)
-	 if(len(shipment.ParentContainerId)!=0){
-	          shipment.ContainerId=childContainerID
-		      vallAsbytes, err := stub.GetState(shipment.ParentContainerId)
-	          if len(vallAsbytes) == 0 {
-		 	         jsonResp := "{\"Error\":\"Failed to get state for ParentContainerId since there is no such container \"}"
-		             return nil, errors.New(jsonResp)
-	           }
-	                fmt.Println("***************json value from the ParentContainerId****************")
-	                fmt.Println(vallAsbytes)
-	          if err != nil{
-		           jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
-		           return nil, errors.New(jsonResp)
-	          }		
-	        parentshipment := Container{}	  
-	        json.Unmarshal([]byte(vallAsbytes), &parentshipment)
-		    fmt.Println("am checking whether parent container is updated with child containerid before")
-		    fmt.Println(parentshipment.ChildContainerId)
-		    parentshipment.ChildContainerId = append(parentshipment.ChildContainerId,childContainerID)
-		    fmt.Println("am checking whether parent container is updated with child containerid after")
-		    fmt.Println(parentshipment.ChildContainerId)
-		    jsonVals, _ := json.Marshal(parentshipment)
-            err = stub.PutState(shipment.ParentContainerId, jsonVals)
-            if err != nil{
-		           jsonResp := "{\"Error\":\"Failed to put state for parent Container id after updating the childcontainerid\"}"
-		           return nil, errors.New(jsonResp)
-	               }
-	        repackagedpallets,_,find2:=repackagedPallets(shipment.ParentContainerId,childContainerID,acceptedPallets)
-			fmt.Println(find2)
-            if(find2){
-		    fmt.Println("am printing repackaged pallets after Validating")
-	        fmt.Println(repackagedpallets)
-			fmt.Println("Am printing container health now")
-		   if (shipment.Elements.Health=="Healthy"){
-	                shipment.Recipient = receiverID
-	                chainActivity := ChainActivity{
+	 json.Unmarshal([]byte(valuAsbytes), &shipment)
+	 shipment.ChildContainerId = append(shipment.ChildContainerId,childContainerID)
+	 if ((len(valuAsbytes) == 0) || (err != nil)) {
+		     fmt.Println("Failed to get state for  containerID ")
+		 	 jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
+	      	 return nil, errors.New(jsonResp)		    
+	 }else{
+		   fmt.Println("Parent container")
+		   jsonVal, _ := json.Marshal(shipment)
+		   fmt.Println("JSON updated for  parent Container")	
+	       fmt.Println(string(jsonVal))
+   	       err = stub.PutState(containerID, jsonVal)
+           if err != nil{
+		              jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
+		              return nil, errors.New(jsonResp)
+	                 }
+	     }
+	      acceptedPallets :=shipment.Elements.Pallets
+		  fmt.Println(acceptedPallets)
+	      dispatchedshipment := Container{}	 
+          json.Unmarshal([]byte(elementsJSON), &dispatchedshipment)
+		  dispatchedshipment.ParentContainerId=containerID
+		  dispatchedshipment.ContainerId=childContainerID
+	      dispatchedPallets :=dispatchedshipment.Elements.Pallets
+		  fmt.Println(dispatchedPallets)
+		  repackagedpallets,_,find2:=repackagedPallets(containerID,childContainerID,acceptedPallets,dispatchedPallets)
+          fmt.Println("Repackaged Pallets")
+		  fmt.Println(repackagedpallets)
+          fmt.Println(find2)
+		  if(!find2){
+			  fmt.Println("Unhealthy Pallets cannot be repackaged")
+			  jsonResp := "{\"Error\":\"Unhealthy Pallets cannot be repackaged \"}"
+	 	      return nil, errors.New(jsonResp)
+		  }else{
+			 dispatchedshipment.Elements.Pallets=repackagedpallets
+                   for m=0; m < len(dispatchedPallets); m++ {
+		                   fmt.Println("Checking the pallet health in repackaging by distributor")
+		                   if(repackagedpallets[m].Health=="Healthy"){
+		                        count++
+			                    
+		                     }
+			        }				 
+		  }
+		  if(len(repackagedpallets)==count){
+			  dispatchedshipment.Elements.Health="Healthy"
+               fmt.Println("updating pallet health in repackaging by distributor")
+			   fmt.Println(dispatchedshipment.Elements.Health)
+		  }
+		 dispatchedshipment.Recipient = receiverID 
+		 chainActivity := ChainActivity{
 		            Sender:   shipment.Provenance.Receiver,
 		            Receiver: receiverID,
 					ShipmentDate :shipmentDate,
@@ -1138,39 +1144,22 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 		        Receiver:      receiverID,
 		        Supplychain:   supplyChain}
 		        conprov.Receiver = receiverID  
-                shipment.Provenance = conprov
-				shipment.ShipmentDate = shipmentDate
-	            shipment.Remarks=remarks
-		   }
-			 }else{
-		           fmt.Println("Repackaging is done only for accepted pallets")
-				   jsonResp := "{\"Error\":\"Repackaging is done only for accepted pallets \"}"
-		           return nil, errors.New(jsonResp)				   
-	        }	
-	       jsonVal, _ := json.Marshal(shipment)
-   	       err = stub.PutState(childContainerID, jsonVal)
+                dispatchedshipment.Provenance = conprov
+				dispatchedshipment.ShipmentDate = shipmentDate
+	            dispatchedshipment.Remarks=remarks
+		   jsonVall, _ := json.Marshal(dispatchedshipment)
+   	       err = stub.PutState(childContainerID, jsonVall)
            if err != nil{
-		        jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
+		        jsonResp := "{\"Error\":\"Failed to put state for child Container id \"}"
 		         return nil, errors.New(jsonResp)
-	       }
-	       valueAsbytes, err := stub.GetState(childContainerID)
-	       if len(valueAsbytes) == 0 {
-		 	          jsonResp := "{\"Error\":\"Failed to get state for child Container id since there is no such container \"}"
-		              return nil, errors.New(jsonResp)
-	      }else{
-		  fmt.Println("JSON ACCEPTED BY Child Container")	
-	      fmt.Println(string(jsonVal))
-	   }
-	setCurrentOwner(stub, shipment.Provenance.Sender, childContainerID)
-	setCurrentOwner(stub, receiverID, childContainerID)
-	return jsonVal, nil		
+	       } 
+		   fmt.Println("Final child container obtained")
+		   fmt.Println(string(jsonVall))
+		   fmt.Println(shipment.Provenance.Receiver)
+		   setCurrentOwner(stub, shipment.Provenance.Receiver, childContainerID)
+	       setCurrentOwner(stub, receiverID, childContainerID)
+	      return jsonVall, nil		
 	
-	}else{
-		   fmt.Println("No such parent container exists")
-		    jsonResp := "{\"Error\":\"No such parent container exists and hence repackage cannot be done \"}"
-		    return nil, errors.New(jsonResp)
-	   }
-	return nil,nil
 }
 func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStubInterface,containerID string, receiverID string, remarks string,date string) ([]byte, error) {
 
