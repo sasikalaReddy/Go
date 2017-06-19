@@ -22,7 +22,7 @@ const STATUS_SHIPPED_BY_DISTRIBUTOR = "shipped by distributor"
 const STATUS_ACCEPTED_BY_LOGISTICS= "accepted by logistics"
 const STATUS_SOLD_BY_RETAILER= "sold by retailer"
 const STATUS_ACCEPTED_BY_RETAILER = "accepted by retailer"  
-const STATUS_PARTIALLY_ACCEPTED_BY_DISTRIBUTOR = "partiallly accepted by distributor"
+const STATUS_PARTIALLY_ACCEPTED_BY_DISTRIBUTOR = "partially accepted by distributor"
 const STATUS_REJECTED_BY_LOGISTICS = "rejected by logistics"
 const STATUS_REJECTED_BY_DISTRIBUTOR  = "rejected by distributor"
 const STATUS_DISPATCHED_BY_LOGISTICS = "dispatched by logistics"
@@ -49,6 +49,7 @@ type Container struct {
 	Recipient         string              `json:"recipient_id"`
 	Elements          ContainerElements   `json:"elements"`
 	Provenance        ContainerProvenance `json:"provenance"`
+	Repackagingstatus  []string            `json:"repackaged_pallets"`
 	CertifiedBy       string              `json:"certified_by"`   ///New fields
 	Address           string              `json:"address"`        ///New fields
 	USN               string              `json:"usn"`            ///New fields
@@ -955,7 +956,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
     conprov.Receiver = receiverID  
     shipment.Provenance = conprov
 	
-		   }else if (count==1){            
+		   }else if (count>=1)||(count<3){            
 			shipment.Elements.Health="PartialHealthy"
 			fmt.Println("Am in update container by distributor and updated as PartialHealthy")
 			shipment.Elements.Pallets=updatedpallets
@@ -978,7 +979,7 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
     conprov.Receiver = receiverID  
     shipment.Provenance = conprov
 	fmt.Println(shipment.Provenance)			
-		}else if (count==2){         
+		}else if (count==3){         
 			shipment.Elements.Health="UnHealthy"
 			fmt.Println("Am in update container by distributor and updated as UnHealthy") 
 			shipment.Elements.Pallets=updatedpallets
@@ -1009,8 +1010,9 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 	}
 	fmt.Println("JSON ACCEPTED BY Reciever")	
 	fmt.Println(string(jsonVal))
-	setCurrentOwner(stub, receiverID, containerID)
-	return nil, nil		
+	fmt.Println(receiverID)
+	setCurrentOwner(stub, receiverID, containerID)	
+	return jsonVal, nil		
 }
 func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStubInterface, ContainerID string) ([]byte,error) {
 	var m int
@@ -1059,7 +1061,7 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 	  fmt.Println("ending conprov")
 	  fmt.Println(parentSupplyChain) 
       shipment.Provenance=childprov
- 	fmt.Println("Am Printing child shipment provenance")
+ 	  fmt.Println("Am Printing child shipment provenance")
 	 fmt.Println(shipment.Provenance)	
 	 jsonVal, _ := json.Marshal(shipment)
    	 fmt.Println(string(jsonVal)) 
@@ -1075,13 +1077,25 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 }
 
 func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.ChaincodeStubInterface,childContainerID string,containerID string, receiverID string, remarks string,elementsJSON string,shipmentDate string) ([]byte, error) {
-	 var m int
+	 var m,n int
 	 var count int=0
 	 fmt.Println("Repackaging Container by Distributor:" + childContainerID)
 	 valuAsbytes, err := stub.GetState(containerID)
 	 shipment := Container{}	  
 	 json.Unmarshal([]byte(valuAsbytes), &shipment)
 	 shipment.ChildContainerId = append(shipment.ChildContainerId,childContainerID)
+	  acceptedPallets :=shipment.Elements.Pallets
+	  fmt.Println(acceptedPallets)
+	  dispatchedshipment := Container{}	 
+      json.Unmarshal([]byte(elementsJSON), &dispatchedshipment)
+	  dispatchedshipment.ParentContainerId=containerID
+	  dispatchedshipment.ContainerId=childContainerID
+	  dispatchedPallets :=dispatchedshipment.Elements.Pallets
+	  for n=0; n < len(dispatchedPallets); n++ {
+          shipment.Repackagingstatus=append(shipment.Repackagingstatus,dispatchedPallets[n].PalletId )
+	  }
+	  fmt.Println("Printing Repackaged pallets in parent container")
+	  fmt.Println(shipment.Repackagingstatus)
 	 if ((len(valuAsbytes) == 0) || (err != nil)) {
 		     fmt.Println("Failed to get state for  containerID ")
 		 	 jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
@@ -1097,13 +1111,6 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 		              return nil, errors.New(jsonResp)
 	                 }
 	     }
-	      acceptedPallets :=shipment.Elements.Pallets
-		  fmt.Println(acceptedPallets)
-	      dispatchedshipment := Container{}	 
-          json.Unmarshal([]byte(elementsJSON), &dispatchedshipment)
-		  dispatchedshipment.ParentContainerId=containerID
-		  dispatchedshipment.ContainerId=childContainerID
-	      dispatchedPallets :=dispatchedshipment.Elements.Pallets
 		  fmt.Println(dispatchedPallets)
 		  repackagedpallets,_,find2:=repackagedPallets(containerID,childContainerID,acceptedPallets,dispatchedPallets)
           fmt.Println("Repackaged Pallets")
@@ -1156,6 +1163,7 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 		   fmt.Println("Final child container obtained")
 		   fmt.Println(string(jsonVall))
 		   fmt.Println(shipment.Provenance.Receiver)
+		   fmt.Println(receiverID)
 		   setCurrentOwner(stub, shipment.Provenance.Receiver, childContainerID)
 	       setCurrentOwner(stub, receiverID, childContainerID)
 	      return jsonVall, nil		
@@ -1203,6 +1211,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStu
 	}	
 	fmt.Println(string(jsonVal))
 	fmt.Println(string(shipment.Provenance.Sender))
+	fmt.Println(receiverID)
 	setCurrentOwner(stub, receiverID, containerID)
 	return jsonVal, nil		
 }
