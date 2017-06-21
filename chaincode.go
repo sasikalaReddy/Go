@@ -149,7 +149,7 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
 	user_byte,_ := t.GetUserAttribute(stub,"user_type")
 		user_type := string(user_byte)
 		if function == "ShipContainerUsingLogistics" {
-		   if (user_type =="logistics"){
+		   if (user_type =="manufacturer"){
 		     return t.ShipContainerUsingLogistics(stub, args[0], args[1], args[2], args[3], args[4],args[5])
 		   }
 	} else if function == "AcceptContainerbyLogistics"{
@@ -161,7 +161,7 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
                return t.DispatchContainer(stub, args[0], args[1],args[2],args[3])	
 		  } 	  		
 	}else if function == "UpdateContainerbyDistributor"{
-		if (user_type =="logistics"){
+		if (user_type =="distributor"){
 		         return t.UpdateContainerbyDistributor(stub, args[0], args[1],args[2],args[3],args[4])		
 		}		   
 	}else if function == "RejectContainerbyLogistics"{
@@ -169,15 +169,15 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
            	return t.RejectContainerbyLogistics(stub, args[0], args[1],args[2],args[3],args[4]) 
 		}
 	}else if function == "repackagingContainerbyDistributor"{
-		if (user_type =="logistics"){
+		if (user_type =="distributor"){
 		         return t.repackagingContainerbyDistributor(stub, args[0],args[1], args[2],args[3],args[4],args[5])		
 		}		   
 	}else if function == "AcceptContainerbyRetailer"{
-		if (user_type =="logistics"){
+		if (user_type =="retailer"){
 		         return t.AcceptContainerbyRetailer(stub, args[0],args[1], args[2],args[3])		
 		}		   
 	}else if function == "SellingbyRetailer"{
-		if (user_type =="logistics"){
+		if (user_type =="retailer"){
 		         return t.SellingbyRetailer(stub, args[0],args[1], args[2],args[3])		
 		}		   
 	}		 
