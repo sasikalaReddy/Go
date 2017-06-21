@@ -21,8 +21,9 @@ const STATUS_ACCEPTED_BY_DISTRIBUTOR = "accepted by distributor"
 const STATUS_SHIPPED_BY_DISTRIBUTOR = "shipped by distributor"
 const STATUS_DISPATCHED__FOR_RETAILER= "dispatched for  retailer"
 const STATUS_ACCEPTED_BY_LOGISTICS= "accepted by logistics"
-const STATUS_SOLD_BY_RETAILER= "sold by retailer"
-const STATUS_ACCEPTED_BY_RETAILER = "accepted by retailer"  
+const STATUS_SOLD_BY_RETAILER= "sold out"
+const STATUS_ACCEPTED_BY_RETAILER = "Accepted by retailer"
+const STATUS_PARTIALLY_ACCEPTED_BY_RETAILER = "partially accepted by Retailer"  
 const STATUS_PARTIALLY_ACCEPTED_BY_DISTRIBUTOR = "partially accepted by distributor"
 const STATUS_REJECTED_BY_LOGISTICS = "rejected by logistics"
 const STATUS_REJECTED_BY_DISTRIBUTOR  = "rejected by distributor"
@@ -148,7 +149,7 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
 	user_byte,_ := t.GetUserAttribute(stub,"user_type")
 		user_type := string(user_byte)
 		if function == "ShipContainerUsingLogistics" {
-		   if (user_type =="manufacturer"){
+		   if (user_type =="logistics"){
 		     return t.ShipContainerUsingLogistics(stub, args[0], args[1], args[2], args[3], args[4],args[5])
 		   }
 	} else if function == "AcceptContainerbyLogistics"{
@@ -160,7 +161,7 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
                return t.DispatchContainer(stub, args[0], args[1],args[2],args[3])	
 		  } 	  		
 	}else if function == "UpdateContainerbyDistributor"{
-		if (user_type =="distributor"){
+		if (user_type =="logistics"){
 		         return t.UpdateContainerbyDistributor(stub, args[0], args[1],args[2],args[3],args[4])		
 		}		   
 	}else if function == "RejectContainerbyLogistics"{
@@ -168,15 +169,15 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
            	return t.RejectContainerbyLogistics(stub, args[0], args[1],args[2],args[3],args[4]) 
 		}
 	}else if function == "repackagingContainerbyDistributor"{
-		if (user_type =="distributor"){
+		if (user_type =="logistics"){
 		         return t.repackagingContainerbyDistributor(stub, args[0],args[1], args[2],args[3],args[4],args[5])		
 		}		   
 	}else if function == "AcceptContainerbyRetailer"{
-		if (user_type =="retailer"){
+		if (user_type =="logistics"){
 		         return t.AcceptContainerbyRetailer(stub, args[0],args[1], args[2],args[3])		
 		}		   
 	}else if function == "SellingbyRetailer"{
-		if (user_type =="retailer"){
+		if (user_type =="logistics"){
 		         return t.SellingbyRetailer(stub, args[0],args[1], args[2],args[3])		
 		}		   
 	}		 
@@ -1018,6 +1019,9 @@ func (t *MedLabPharmaChaincode) UpdateContainerbyDistributor(stub shim.Chaincode
 func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStubInterface, ContainerID string) ([]byte,error) {
 	var m,s int
 	var y int	
+	var count int=0
+	var count1 int=0
+	//var count2 int=0
 	fmt.Println("*****getProvenanceForContainer****** " + ContainerID)
 	valAsbytes, err := stub.GetState(ContainerID)
 	if len(valAsbytes) == 0 {
@@ -1101,18 +1105,32 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
                                    parentSupplyChain1 := mainConProv.Supplychain 
 	                               newConprov:=childshipment.Provenance
 	                               newSupplyChain:=newConprov.Supplychain 
+								  
 							       fmt.Println("Parent container has the following  children")		  	          
 					                for s=0; s < len(newSupplyChain); s++ { 		
 							                   newSupplyChain[s].Remarks="ChildContainerId: "+newchild+ " - " +newSupplyChain[s].Remarks	 
 							                   parentSupplyChain1=append(parentSupplyChain1, newSupplyChain[s])
-									           if(len(newSupplyChain)==2){
-										                    mainConProv.TransitStatus=STATUS_DISPATCHED__FOR_RETAILER
-										                    fmt.Println( mainConProv.TransitStatus)
-									                       }
+									           if(len(newSupplyChain)==1){
+												         count++ 
+									             }else if(len(newSupplyChain)==2){
+															   count1++
+														   }
 			                                     fmt.Println(newSupplyChain[s])									  
 									             fmt.Println(newSupplyChain[s].Remarks)
                                       }
-								
+									  fmt.Println("printing count values")
+									  fmt.Println(count)
+									  fmt.Println(count1)
+								     if(count>1){
+									     	
+										  mainConProv.TransitStatus=STATUS_PARTIALLY_ACCEPTED_BY_RETAILER
+										  fmt.Println( mainConProv.TransitStatus)	
+
+									 }else if(count1>1){
+
+										   mainConProv.TransitStatus=STATUS_SOLD_BY_RETAILER
+										  fmt.Println( mainConProv.TransitStatus)
+									 }
 			                          fmt.Println(parentSupplyChain1)						 
 			                          mainConProv.Supplychain=parentSupplyChain1				
 	                                  mainshipment.Provenance=mainConProv                          
@@ -1124,7 +1142,26 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
    	                fmt.Println(string(jsonVal))
 			        return 	jsonVal,nil	
 			 		
-	           }
+	           }else {
+				   fmt.Println(" Provenance For the individual container without parent and child")
+				           fmt.Println("*****getProvenanceForContainer****** " + ContainerID)
+	                       valAsbytes, err := stub.GetState(ContainerID)
+	                        if len(valAsbytes) == 0 {
+		 	                          jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
+		                              return nil, errors.New(jsonResp)
+	                         }
+	                     fmt.Println("json value from the container****************")
+	                     fmt.Println(valAsbytes)
+	                     if err != nil{
+		                          jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
+		                          return nil, errors.New(jsonResp)
+	                              }		
+	                    shipment := Container{}	  
+	                    json.Unmarshal([]byte(valAsbytes), &shipment)
+						jsonVal, _ := json.Marshal(shipment)
+   	                    fmt.Println(string(jsonVal))
+						return jsonVal,nil	
+			   }
 			  return nil,nil
 }
 
