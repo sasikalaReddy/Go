@@ -61,6 +61,9 @@ type Container struct {
 	ReceivedDate      string              `json:"recieved_date"` 
     SenderAddress     string              `json:"sender_address"`
 }
+type UnitIDListJson struct {
+	UnitID  []string            `json:"units_sold"`
+	}
 
 type ContainerElements struct {
 	Pallets []Pallet `json:"pallets"`
@@ -151,34 +154,50 @@ func (t *MedLabPharmaChaincode) Invoke(stub shim.ChaincodeStubInterface, functio
 		if function == "ShipContainerUsingLogistics" {
 		   if (user_type =="manufacturer"){
 		     return t.ShipContainerUsingLogistics(stub, args[0], args[1], args[2], args[3], args[4],args[5])
+		   }else{
+                return nil, errors.New("User type: " + user_type+ "does not have privilege to execute chain code 'ShipContainerUsingLogistics'" )
 		   }
 	} else if function == "AcceptContainerbyLogistics"{
 		  if (user_type =="logistics"){
 			  return t.AcceptContainerbyLogistics(stub, args[0], args[1],args[2], args[3],args[4])
+		  }else{
+               return nil, errors.New("User type: " + user_type+ "does not have privilege to execute chain code 'AcceptContainerbyLogistics'" )
 		  }	  
 	}else if function == "DispatchContainer"{
 		  if (user_type =="logistics"){
                return t.DispatchContainer(stub, args[0], args[1],args[2],args[3])	
-		  } 	  		
+		  }else{
+                return nil, errors.New("User type: " + user_type+ "does not have privilege to execute chain code 'DispatchContainer'" )
+		  }	  		
 	}else if function == "UpdateContainerbyDistributor"{
 		if (user_type =="distributor"){
 		         return t.UpdateContainerbyDistributor(stub, args[0], args[1],args[2],args[3],args[4])		
+		}else{
+             return nil, errors.New("User type: " + user_type+ "does not have privilege to execute chain code 'UpdateContainerbyDistributor'" )
 		}		   
 	}else if function == "RejectContainerbyLogistics"{
 		  if (user_type =="logistics"){
            	return t.RejectContainerbyLogistics(stub, args[0], args[1],args[2],args[3],args[4]) 
+		}else{
+              return nil, errors.New("User type: " + user_type+ "does not have privilege to execute chain code 'RejectContainerbyLogistics'" )
 		}
 	}else if function == "repackagingContainerbyDistributor"{
 		if (user_type =="distributor"){
-		         return t.repackagingContainerbyDistributor(stub, args[0],args[1], args[2],args[3],args[4],args[5])		
+			return t.repackagingContainerbyDistributor(stub, args[0],args[1], args[2],args[3],args[4],args[5])		
+		}else{
+			return nil, errors.New("User type: " + user_type+ "does not have privilege to execute chain code 'repackagingContainerbyDistributor'" )
 		}		   
 	}else if function == "AcceptContainerbyRetailer"{
 		if (user_type =="retailer"){
 		         return t.AcceptContainerbyRetailer(stub, args[0],args[1], args[2],args[3])		
+		}else{
+            return nil, errors.New("User type: " + user_type+ "does not have privilege to execute chain code 'AcceptContainerbyRetailer'" )
 		}		   
 	}else if function == "SellingbyRetailer"{
 		if (user_type =="retailer"){
-		         return t.SellingbyRetailer(stub, args[0],args[1], args[2],args[3])		
+		        return t.SellingbyRetailer(stub, args[0],args[1], args[2],args[3])		
+		}else{
+             return nil, errors.New("User type: " + user_type+ "does not have privilege to execute chain code 'SellingbyRetailer'" )
 		}		   
 	}		 
 	fmt.Println("invoke did not find func: " + function)
@@ -1164,10 +1183,30 @@ func (t *MedLabPharmaChaincode) getProvenanceForContainer(stub shim.ChaincodeStu
 			   }
 			  return nil,nil
 }
+func removeDuplicates(elements []string) []string{
+    // Use map to record duplicates as we find them.
+	fmt.Println("Removing Duplicates in Repackaging status")
+    encountered := map[string]bool{}
+    result := []string{}
+
+    for v := range elements {
+        if encountered[elements[v]] == true {
+            // Do not add duplicate.
+        } else {
+            // Record this element as an encountered element.
+            encountered[elements[v]] = true
+            // Append to result slice.
+            result = append(result, elements[v])
+        }
+    }
+    // Return the new slice.
+    return result
+}
 
 func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.ChaincodeStubInterface,childContainerID string,containerID string, receiverID string, remarks string,elementsJSON string,shipmentDate string) ([]byte, error) {
 	 var m,n int
 	 var count int=0
+	 var repackagingstatu1 []string
 	 fmt.Println("Repackaging Container by Distributor:" + childContainerID)
 	 valuAsbytes, err := stub.GetState(containerID)
 	 shipment := Container{}	  
@@ -1181,7 +1220,13 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 	  dispatchedshipment.ContainerId=childContainerID
 	  dispatchedPallets :=dispatchedshipment.Elements.Pallets
 	  for n=0; n < len(dispatchedPallets); n++ {
-          shipment.Repackagingstatus=append(shipment.Repackagingstatus,dispatchedPallets[n].PalletId )
+		  
+               repackagingstatu1=append(shipment.Repackagingstatus,dispatchedPallets[n].PalletId )
+			   fmt.Println("before removing duplicates")
+			   fmt.Println(repackagingstatu1)
+			   shipment.Repackagingstatus= removeDuplicates(repackagingstatu1)
+			   fmt.Println("after removing duplicates")
+			   fmt.Println(shipment.Repackagingstatus)
 	  }
 	  fmt.Println("Printing Repackaged pallets in parent container")
 	  fmt.Println(shipment.Repackagingstatus)
@@ -1397,129 +1442,129 @@ func checkUnits(acceptedUnits []Unit,soldunits []string)([]Unit, error,bool) {
 	//return dispatchedpallets,nil,find1
 	return acceptedUnits,nil,s2
 }
+func (t *MedLabPharmaChaincode) SellingbyRetailer(stub shim.ChaincodeStubInterface,containerID string, customerID string,UnitJson string, remarks string) ([]byte, error) {
+     var  s,l int
+	 var flag,flag1,flag2,flag3,flag4 bool
+	 var string2 []string
+	 fmt.Println("Invoking Sellingby Retailer")
+	 fmt.Println(containerID)
+	 fmt.Println(customerID)
+	 fmt.Println(UnitJson)
+	unitshipment := UnitIDListJson{}	  
+	json.Unmarshal([]byte(UnitJson), &unitshipment) 
+	fmt.Println(unitshipment)
+    sellunits:=unitshipment.UnitID
+	fmt.Println(sellunits)
+    for s=0; s < len(sellunits); s++ {
+	     flag=strings.Contains(sellunits[s],"-")
+	      if(flag){
+		       string2= strings.Split(sellunits[s], "-")    
+		       l=len(string2)
+	           flag1=strings.Contains(string2[0], "CON")
+               flag2=strings.Contains(string2[1], "PAL")
+		       flag3=strings.Contains(string2[2], "CASE")
+		       flag4=strings.Contains(string2[3], "UNIT")
+		       fmt.Println("My string is",flag1,flag2,flag3,flag4) 
+	           if((flag1&&flag2&&flag3&&flag4)&&(l==4)){
+				   fmt.Println("unit id is  in the valid format")
+	                valAsbytes, _ := stub.GetState(containerID)
+	                 if len(valAsbytes) == 0 {
+		 	                  jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
+		                       return nil, errors.New(jsonResp)
+	                          }
+					          shipment := Container{}	  
+	                          json.Unmarshal([]byte(valAsbytes), &shipment) 
+					          acceptedPallets :=shipment.Elements.Pallets
+					          checkPallets,_,find2:=checkPallets(acceptedPallets,sellunits)
+							  shipment.Elements.Pallets=checkPallets
+							  fmt.Println(find2)
+							  jsonVal, _ := json.Marshal(shipment)
+  	                          fmt.Println(string(jsonVal))
+	                         setCurrentOwner(stub, customerID, containerID)
+	                         return jsonVal, nil
+		               }else{
+			                  fmt.Println("Unit id is not in the valid format")
+		                      jsonResp := "{\"Error\":\"Unit id is not in the valid format \"}"
+		                      return nil, errors.New(jsonResp)
+		                     }	      
+             }else{
+			      fmt.Println("Unit id is not in the valid format")
+		          jsonResp := "{\"Error\":\"Unit id is not in the valid format \"}"
+		          return nil, errors.New(jsonResp)
+		        }	
+
+       }		
+
+   return nil,nil
+	    }
 // func (t *MedLabPharmaChaincode) SellingbyRetailer(stub shim.ChaincodeStubInterface,containerID string, customerID string,UnitID string, remarks string) ([]byte, error) {
-//      var  s,l int
-// 	 var flag,flag1,flag2,flag3,flag4 bool
-// 	 var string2 []string
-// 	 //var containerid string
-// 	 sellunits := []string{"subCON4-PAL13-CASE1-UNIT1", "subCON4-PAL15-CASE1-UNIT2", "subCON4-PAL15-CASE3-UNIT2", "subCON4-PAL13-CASE3-UNIT3"}
-//      for s=0; s < len(sellunits); s++ {
-// 	     flag=strings.Contains(sellunits[s],"-")
-// 	      if(flag){
-// 		       string2= strings.Split(sellunits[s], "-")    
-// 		       l=len(string2)
-//               // fmt.Println("My string is"+l)    
-// 	          // containerid=string2[0]
-// 	           flag1=strings.Contains(string2[0], "CON")
-//                flag2=strings.Contains(string2[1], "PAL")
-// 		       flag3=strings.Contains(string2[2], "CASE")
-// 		       flag4=strings.Contains(string2[3], "UNIT")
-// 		       fmt.Println("My string is",flag1,flag2,flag3,flag4) 
-// 	           if((flag1&&flag2&&flag3&&flag4)&&(l==4)){
-// 				   fmt.Println("  unit id is  in the valid format")
-// 	                valAsbytes, _ := stub.GetState(containerID)
-// 	                 if len(valAsbytes) == 0 {
-// 		 	                  jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
-// 		                       return nil, errors.New(jsonResp)
-// 	                          }
-// 					          shipment := Container{}	  
-// 	                          json.Unmarshal([]byte(valAsbytes), &shipment) 
-// 					          acceptedPallets :=shipment.Elements.Pallets
-// 					          checkPallets,_,find2:=checkPallets(acceptedPallets,sellunits)
-// 							  shipment.Elements.Pallets=checkPallets
-// 							  fmt.Println(find2)
-// 							  jsonVal, _ := json.Marshal(shipment)
-//                             //   err = stub.PutState(containerID, jsonVal)
-//                             //   if err != nil{
-// 		                    //               jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
-// 		                    //                return nil, errors.New(jsonResp)
-// 	                        //               }	
-// 	                         fmt.Println(string(jsonVal))
-// 	                         setCurrentOwner(stub, customerID, containerID)
-// 	                         return jsonVal, nil
-// 		               }else{
-// 			                  fmt.Println("Unit id is not in the valid format")
-// 		                      jsonResp := "{\"Error\":\"Unit id is not in the valid format \"}"
-// 		                      return nil, errors.New(jsonResp)
-// 		                     }	      
-//              }else{
-// 			      fmt.Println("Unit id is not in the valid format")
+//     var m,n int
+// 	var o,l int
+// 	var string2 []string
+// 	var containerid string
+// 	var flag,flag1 bool
+// 	var flag2,flag3,flag4 bool
+// 	flag=strings.Contains(UnitID,"-")
+// 	if(flag){
+// 		  string2= strings.Split(UnitID, "-")
+// 		  l=len(string2)
+//           fmt.Println("My string is",l)    
+// 	      containerid=string2[0]
+// 	      flag1=strings.Contains(string2[0], "CON")
+//           flag2=strings.Contains(string2[1], "PAL")
+// 		  flag3=strings.Contains(string2[2], "CASE")
+// 		  flag4=strings.Contains(string2[3], "UNIT")
+// 		  fmt.Println("My string is",flag1,flag2,flag3,flag4) 
+// 	      if(flag1&&flag2&&flag3&&flag4){
+// 			  	 fmt.Println("Selling the unit by Retailer:" + containerid)
+// 	             valAsbytes, err := stub.GetState(containerid)
+// 	             if len(valAsbytes) == 0 {
+// 		 	            jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
+// 		                return nil, errors.New(jsonResp)
+// 	                   }
+// 	            fmt.Println("json value from the container****************")
+// 	            fmt.Println(valAsbytes)
+// 	            if err != nil{
+// 		             jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
+// 		             return nil, errors.New(jsonResp)
+// 	                 }
+//           shipment := Container{}	  
+// 	      json.Unmarshal([]byte(valAsbytes), &shipment)
+// 	      for m=0; m < len(shipment.Elements.Pallets); m++ {
+//               for n=0; n < len(shipment.Elements.Pallets[m].Cases); n++ {
+//                    for o=0; o < len(shipment.Elements.Pallets[m].Cases[n].Units); o++ {
+//                       if(shipment.Elements.Pallets[m].Cases[n].Units[o].UnitId==UnitID){
+//                             shipment.Elements.Pallets[m].Cases[n].Units[o].SaleStatus=STATUS_SOLD_BY_RETAILER
+// 					        fmt.Println(shipment.Elements.Pallets[m].Cases[n].Units[o].SaleStatus)
+// 					        fmt.Println(shipment.Elements.Pallets[m].Cases[n].Units[o].UnitId)
+// 					        fmt.Println(UnitID)
+// 				          }else{
+// 					                fmt.Println("Am not updating sale status")
+// 				                 }
+// 	                 }
+// 	             }
+// 	       }
+// 	      jsonVal, _ := json.Marshal(shipment)
+//           err = stub.PutState(containerID, jsonVal)
+//           if err != nil{
+// 		          jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
+// 		          return nil, errors.New(jsonResp)
+// 	              }	
+// 	       fmt.Println(string(jsonVal))
+// 	       setCurrentOwner(stub, customerID, containerID)
+// 	       return jsonVal, nil	
+// 	    }else{
+//                   fmt.Println("Unit id is not in the valid format")
 // 		          jsonResp := "{\"Error\":\"Unit id is not in the valid format \"}"
 // 		          return nil, errors.New(jsonResp)
-// 		        }	
-
-//        }		
-
-//    return nil,nil
-// 	    }
-func (t *MedLabPharmaChaincode) SellingbyRetailer(stub shim.ChaincodeStubInterface,containerID string, customerID string,UnitID string, remarks string) ([]byte, error) {
-    var m,n int
-	var o,l int
-	var string2 []string
-	var containerid string
-	var flag,flag1 bool
-	var flag2,flag3,flag4 bool
-	flag=strings.Contains(UnitID,"-")
-	if(flag){
-		  string2= strings.Split(UnitID, "-")
-		  l=len(string2)
-          fmt.Println("My string is",l)    
-	      containerid=string2[0]
-	      flag1=strings.Contains(string2[0], "CON")
-          flag2=strings.Contains(string2[1], "PAL")
-		  flag3=strings.Contains(string2[2], "CASE")
-		  flag4=strings.Contains(string2[3], "UNIT")
-		  fmt.Println("My string is",flag1,flag2,flag3,flag4) 
-	      if(flag1&&flag2&&flag3&&flag4){
-			  	 fmt.Println("Selling the unit by Retailer:" + containerid)
-	             valAsbytes, err := stub.GetState(containerid)
-	             if len(valAsbytes) == 0 {
-		 	            jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
-		                return nil, errors.New(jsonResp)
-	                   }
-	            fmt.Println("json value from the container****************")
-	            fmt.Println(valAsbytes)
-	            if err != nil{
-		             jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
-		             return nil, errors.New(jsonResp)
-	                 }
-          shipment := Container{}	  
-	      json.Unmarshal([]byte(valAsbytes), &shipment)
-	      for m=0; m < len(shipment.Elements.Pallets); m++ {
-              for n=0; n < len(shipment.Elements.Pallets[m].Cases); n++ {
-                   for o=0; o < len(shipment.Elements.Pallets[m].Cases[n].Units); o++ {
-                      if(shipment.Elements.Pallets[m].Cases[n].Units[o].UnitId==UnitID){
-                            shipment.Elements.Pallets[m].Cases[n].Units[o].SaleStatus=STATUS_SOLD_BY_RETAILER
-					        fmt.Println(shipment.Elements.Pallets[m].Cases[n].Units[o].SaleStatus)
-					        fmt.Println(shipment.Elements.Pallets[m].Cases[n].Units[o].UnitId)
-					        fmt.Println(UnitID)
-				          }else{
-					                fmt.Println("Am not updating sale status")
-				                 }
-	                 }
-	             }
-	       }
-	      jsonVal, _ := json.Marshal(shipment)
-          err = stub.PutState(containerID, jsonVal)
-          if err != nil{
-		          jsonResp := "{\"Error\":\"Failed to put state for Container id \"}"
-		          return nil, errors.New(jsonResp)
-	              }	
-	       fmt.Println(string(jsonVal))
-	       setCurrentOwner(stub, customerID, containerID)
-	       return jsonVal, nil	
-	    }else{
-                  fmt.Println("Unit id is not in the valid format")
-		          jsonResp := "{\"Error\":\"Unit id is not in the valid format \"}"
-		          return nil, errors.New(jsonResp)
-		     }
-	}else{
-		          fmt.Println("Unit id is not in the valid format")
-		          jsonResp := "{\"Error\":\"Unit id is not in the valid format \"}"
-		          return nil, errors.New(jsonResp)
-	      }
+// 		     }
+// 	}else{
+// 		          fmt.Println("Unit id is not in the valid format")
+// 		          jsonResp := "{\"Error\":\"Unit id is not in the valid format \"}"
+// 		          return nil, errors.New(jsonResp)
+// 	      }
 	
-}
+// }
 func (t *MedLabPharmaChaincode) GetUserAttribute(stub shim.ChaincodeStubInterface, attributeName string) ([]byte,error) {
 	fmt.Println("***** Inside GetUserAttribute() func for attribute:" + attributeName)
 	attributeValue, err := stub.ReadCertAttribute(attributeName)
