@@ -19,15 +19,13 @@ import (
 const STATUS_SHIPPED = "shipped by manufacturer"
 const STATUS_ACCEPTED_BY_DISTRIBUTOR = "accepted by distributor"
 const STATUS_SHIPPED_BY_DISTRIBUTOR = "dispatched by distributor"
-const STATUS_DISPATCHED__FOR_RETAILER= "dispatched for  retailer"
 const STATUS_ACCEPTED_BY_LOGISTICS= "accepted by logistics"
 const STATUS_SOLD_BY_RETAILER= "sold out"
 const STATUS_PARTIALLY_SOLD_BY_RETAILER= "partially sold"
-const STATUS_DISPATCH_IN_PROGRESS= "dispatch in progress"
+const STATUS_DISPATCH_IN_PROGRESS= "dispatch in progress by distributor"
 const STATUS_ACCEPTED_BY_RETAILER = "accepted by retailer"
-const STATUS_REJECTED_BY_RETAILER="Rejected by retailer"
-const STATUS_REJECTED_BY_CONSUMER="Counterfeit  Highlighted"
-//const STATUS_PARTIALLY_ACCEPTED_BY_RETAILER = "partially accepted by Retailer"  
+const STATUS_REJECTED_BY_RETAILER="rejected by retailer"
+const STATUS_REJECTED_BY_CONSUMER="counterfeit  highlighted"
 const STATUS_PARTIALLY_ACCEPTED_BY_DISTRIBUTOR = "partially accepted by distributor"
 const STATUS_REJECTED_BY_LOGISTICS = "rejected by logistics"
 const STATUS_REJECTED_BY_DISTRIBUTOR  = "rejected by distributor"
@@ -241,6 +239,8 @@ func (t *MedLabPharmaChaincode) Query(stub shim.ChaincodeStubInterface, function
 		return t.getProvenanceForContainer(stub, args[0])
 	}else if function == "SearchById" {
 		return t.SearchById(stub, args[0])
+	}else if function == "SearchByName" {
+		return t.SearchByName(stub, args[0],args[1])
 	}	
 	fmt.Println("query did not find func: " + function)
 	return nil, errors.New("Received unknown function query: " + function)
@@ -1470,6 +1470,7 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
     var string2 []string
     var containerID string
 	var flag,flag1 bool
+	var m,y,s,count,count1 int
 	fmt.Println("SearchById:" + ID)
 	flag=strings.Contains(ID, "-")
 	if(flag){
@@ -1492,11 +1493,122 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
 	                 }
 	  shipment := Container{}	  
 	  json.Unmarshal([]byte(valAsbytes), &shipment)
-	  fmt.Println("printing the container being searched")
-	  fmt.Println(shipment)
-      jsonVal, _ := json.Marshal(shipment)
-	  fmt.Println(string(jsonVal))
-	  return jsonVal, nil		
+	   if(len(shipment.ParentContainerId)!=0){
+		         fmt.Println("It has parent provenance to be attached")
+		         fmt.Println(shipment.ParentContainerId)
+	 	         valueAsbytes, err := stub.GetState(shipment.ParentContainerId)
+	             if len(valueAsbytes) == 0 {
+		 	                jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
+		                    return nil, errors.New(jsonResp)
+	                        }
+	            fmt.Println("json value from the container****************")
+	            fmt.Println(valueAsbytes)
+	            if err != nil{
+		                   jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
+		                   return nil, errors.New(jsonResp)
+	                       }	
+	            parentshipment := Container{}
+	            json.Unmarshal([]byte(valueAsbytes), &parentshipment)
+	            fmt.Println("Am Printing Parent shipment provenance")
+	            fmt.Println(parentshipment.Provenance)
+	            parentConProv := parentshipment.Provenance 
+                parentSupplyChain := parentConProv.Supplychain 
+	            childprov:=shipment.Provenance
+	            for m=0; m < len(childprov.Supplychain); m++ {
+		 	             parentSupplyChain=append(parentSupplyChain, childprov.Supplychain[m])
+	                     }
+	            childsupplychain:=parentSupplyChain
+	            childprov.Supplychain=childsupplychain
+	            fmt.Println("new conprov")
+                fmt.Println(childprov)
+	            fmt.Println("ending conprov")
+	            fmt.Println(parentSupplyChain) 
+                shipment.Provenance=childprov
+ 	            fmt.Println("Am Printing child shipment provenance")
+	            fmt.Println(shipment.Provenance)	
+	            jsonVal, _ := json.Marshal(shipment)
+   	            fmt.Println(string(jsonVal)) 
+	            return jsonVal, nil	 	    
+	 }else if(len(shipment.ChildContainerId)!=0){
+                 valuesAsbytes, err := stub.GetState(containerID)
+	              if len(valuesAsbytes) == 0 {
+		 	                   jsonResp := "{\"Error\":\"Failed to get state for child  Container id since there is no such container \"}"
+		                        return nil, errors.New(jsonResp)
+	                           }
+	               fmt.Println("json value from the child container****************")
+	               if err != nil{
+		                        jsonResp := "{\"Error\":\"Failed to get state for child Container id \"}"
+		                         return nil, errors.New(jsonResp)
+	                           }
+                   mainshipment := Container{}	  
+	               json.Unmarshal([]byte(valuesAsbytes), &mainshipment)
+                   mainConProv := mainshipment.Provenance                  
+	     		   fmt.Println(len(shipment.ChildContainerId))
+		           for y=0; y < len(shipment.ChildContainerId); y++ {		 
+		                         newchild:=shipment.ChildContainerId[y]				   
+		                         fmt.Println("new child")
+		                         fmt.Println(newchild)				  
+		                          valsAsbytes, err := stub.GetState(newchild)
+	                              if len(valsAsbytes) == 0 {
+		 	                            jsonResp := "{\"Error\":\"Failed to get state for child  Container id since there is no such container \"}"
+		                                return nil, errors.New(jsonResp)
+	                                    }
+	         	                  if err != nil{
+		                                 jsonResp := "{\"Error\":\"Failed to get state for child Container id \"}"
+		                                  return nil, errors.New(jsonResp)
+	                                     }
+                                  childshipment := Container{}	  
+	                              json.Unmarshal([]byte(valsAsbytes), &childshipment)
+                                   parentSupplyChain1 := mainConProv.Supplychain 
+	                               newConprov:=childshipment.Provenance
+	                               newSupplyChain:=newConprov.Supplychain 								  
+							       fmt.Println("Parent container has the following  children")		  	          
+					                for s=0; s < len(newSupplyChain); s++ { 		
+							                   newSupplyChain[s].Remarks="ChildContainerId: "+newchild+ " - " +newSupplyChain[s].Remarks	 
+							                   parentSupplyChain1=append(parentSupplyChain1, newSupplyChain[s])
+			                                   fmt.Println(newSupplyChain[s])									  
+									           fmt.Println(newSupplyChain[s].Remarks)
+                                      }
+									  fmt.Println("printing count values")
+									  fmt.Println(count)
+									  fmt.Println(count1)
+						  fmt.Println(parentSupplyChain1)						 
+			                          mainConProv.Supplychain=parentSupplyChain1				
+	                                  mainshipment.Provenance=mainConProv           
+			            }				
+	                fmt.Println("new parent mainConProv")
+                    fmt.Println(mainConProv)
+	                fmt.Println("ending child mainconprov")
+	                jsonVal, _ := json.Marshal(mainshipment)
+   	                fmt.Println(string(jsonVal))
+			        return 	jsonVal,nil	
+			 		
+	           }else {
+				   fmt.Println(" Provenance For the individual container without parent and child")
+				           fmt.Println("*****getProvenanceForContainer****** " + containerID)
+	                       valAsbytes, err := stub.GetState(containerID)
+	                        if len(valAsbytes) == 0 {
+		 	                          jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
+		                              return nil, errors.New(jsonResp)
+	                         }
+	                     fmt.Println("json value from the container****************")
+	                     fmt.Println(valAsbytes)
+	                     if err != nil{
+		                          jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
+		                          return nil, errors.New(jsonResp)
+	                              }		
+	                    shipment := Container{}	  
+	                    json.Unmarshal([]byte(valAsbytes), &shipment)
+						jsonVal, _ := json.Marshal(shipment)
+   	                    fmt.Println(string(jsonVal))
+						return jsonVal,nil	
+			   }
+			  
+	//   fmt.Println("printing the container being searched")
+	//   fmt.Println(shipment)
+    //   jsonVal, _ := json.Marshal(shipment)
+	//   fmt.Println(string(jsonVal))
+	//   return jsonVal, nil		
 	     }else{
 		       fmt.Println("Though Id is seperated by - it doesnot contain Valid containerID")
 			   jsonResp := "{\"Error\":\"Though Id is seperated by - it doesnot contain Valid containerID \"}"
@@ -1508,6 +1620,10 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
 		 return nil, errors.New(jsonResp)
 		return nil,nil
 	    }
+	return nil,nil
+}
+func (t *MedLabPharmaChaincode) SearchByName(stub shim.ChaincodeStubInterface,drugname  string,gename  string) ([]byte, error) {
+    fmt.Println("This Method searches by Name" +drugname +gename )	//var a int     
 	return nil,nil
 }
 func checkPallets(acceptedpallets []Pallet,soldunits []string)([]Pallet, error,bool) {
