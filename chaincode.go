@@ -1464,6 +1464,72 @@ func (t *MedLabPharmaChaincode)RejectingbyConsumer(stub shim.ChaincodeStubInterf
 	setCurrentOwner(stub, receiverID, containerID)
 	return jsonVal, nil		
 }
+func searchedPallets(acceptedpallets []Pallet,ID string)([]Pallet, error,int) {
+	 fmt.Println("In searchedPallets")
+	 fmt.Println(acceptedpallets)
+	 fmt.Println(ID)
+	 var a,count2 int
+	 for a=0; a < len(acceptedpallets); a++ {
+        checkCases,_,count:=searchedCases(acceptedpallets[a].Cases,ID)
+		fmt.Println("after first pallet")
+		fmt.Println(checkCases)
+		fmt.Println(count)
+		if(count==1){
+			count2=1
+			return acceptedpallets,nil,count
+		}else{
+			count2=2
+			fmt.Println(acceptedpallets[a].PalletId)
+		    }
+	 }
+	 fmt.Println("count in searched Pallets")
+	 fmt.Println(count2)
+	 	return acceptedpallets,nil,count2
+}
+func searchedCases(acceptedCases []Case,ID string)([]Case, error,int) {
+	 fmt.Println("In searchedCases")
+	 fmt.Println(acceptedCases)
+	 var b int
+	 var count1 int
+	 for b=0; b < len(acceptedCases); b++ {
+        checkUnits,_,count:=searchedUnits(acceptedCases[b].Units,ID)
+		fmt.Println(checkUnits)
+		fmt.Println(count)
+		if(count==1){
+			count1=1
+			return acceptedCases,nil,count1
+		}else{
+			count1=2	
+			fmt.Println(acceptedCases[b].CaseId)	
+		}
+	 }
+	 fmt.Println("count in searched cases")
+	 fmt.Println(count1)
+	return acceptedCases,nil,count1
+}
+func searchedUnits(acceptedUnits []Unit,ID string)([]Unit, error,int) {
+	 fmt.Println("In searchedUnits")
+	 fmt.Println(acceptedUnits)
+	 fmt.Println(ID)
+	 var c,count int
+	 for c=0; c < len(acceptedUnits); c++ {		 
+              if(acceptedUnits[c].UnitId==ID){
+                 fmt.Println("match occurred")
+				 fmt.Println(acceptedUnits[c].UnitId)
+				 fmt.Println(ID)
+				 count =1
+				 fmt.Println(count)
+				 return acceptedUnits,nil,count
+			     }else{
+			               count=2
+						   fmt.Println(acceptedUnits[c].UnitId)			
+		              }         
+		      
+	            }
+				fmt.Println("count in searched units")
+				fmt.Println(count)
+		return acceptedUnits,nil,count
+}
 
 func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID string) ([]byte, error) {
     fmt.Println("This Method searches by ID" + ID)
@@ -1493,42 +1559,55 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
 	                 }
 	  shipment := Container{}	  
 	  json.Unmarshal([]byte(valAsbytes), &shipment)
+	  acceptedpallets:=shipment.Elements.Pallets
+	  searchedPallets,_,count55:=searchedPallets(acceptedpallets,ID)	
+	  //if(count55==1)
+	  fmt.Println(searchedPallets)
 	   if(len(shipment.ParentContainerId)!=0){
 		         fmt.Println("It has parent provenance to be attached")
 		         fmt.Println(shipment.ParentContainerId)
-	 	         valueAsbytes, err := stub.GetState(shipment.ParentContainerId)
-	             if len(valueAsbytes) == 0 {
-		 	                jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
-		                    return nil, errors.New(jsonResp)
-	                        }
-	            fmt.Println("json value from the container****************")
-	            fmt.Println(valueAsbytes)
-	            if err != nil{
-		                   jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
-		                   return nil, errors.New(jsonResp)
-	                       }	
-	            parentshipment := Container{}
-	            json.Unmarshal([]byte(valueAsbytes), &parentshipment)
-	            fmt.Println("Am Printing Parent shipment provenance")
-	            fmt.Println(parentshipment.Provenance)
-	            parentConProv := parentshipment.Provenance 
-                parentSupplyChain := parentConProv.Supplychain 
-	            childprov:=shipment.Provenance
-	            for m=0; m < len(childprov.Supplychain); m++ {
-		 	             parentSupplyChain=append(parentSupplyChain, childprov.Supplychain[m])
-	                     }
-	            childsupplychain:=parentSupplyChain
-	            childprov.Supplychain=childsupplychain
-	            fmt.Println("new conprov")
-                fmt.Println(childprov)
-	            fmt.Println("ending conprov")
-	            fmt.Println(parentSupplyChain) 
-                shipment.Provenance=childprov
- 	            fmt.Println("Am Printing child shipment provenance")
-	            fmt.Println(shipment.Provenance)	
-	            jsonVal, _ := json.Marshal(shipment)
-   	            fmt.Println(string(jsonVal)) 
-	            return jsonVal, nil	 	    
+				 if(count55==1) { 
+	                      fmt.Println("Checking if there is the unit in the repackaged container")
+                          fmt.Println(count55)
+	 	                  valueAsbytes, err := stub.GetState(shipment.ParentContainerId)
+	                      if len(valueAsbytes) == 0 {
+		 	                     jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
+		                         return nil, errors.New(jsonResp)
+	                             }
+	     	              fmt.Println(valueAsbytes)
+	                      if err != nil{
+		                          jsonResp := "{\"Error\":\"Failed to get state for Container id \"}"
+		                          return nil, errors.New(jsonResp)
+	                             }	
+	                      parentshipment := Container{}
+	                      json.Unmarshal([]byte(valueAsbytes), &parentshipment)
+	                      fmt.Println("Am Printing Parent shipment provenance")
+	                      fmt.Println(parentshipment.Provenance)
+	                      parentConProv := parentshipment.Provenance 
+                          parentSupplyChain := parentConProv.Supplychain 
+	                      childprov:=shipment.Provenance
+	                      for m=0; m < len(childprov.Supplychain); m++ {
+		 	                        parentSupplyChain=append(parentSupplyChain, childprov.Supplychain[m])
+	                               }
+	                      childsupplychain:=parentSupplyChain
+	                      childprov.Supplychain=childsupplychain
+	                      fmt.Println("new conprov")
+                          fmt.Println(childprov)
+	                      fmt.Println("ending conprov")
+	                      fmt.Println(parentSupplyChain) 
+                          shipment.Provenance=childprov
+ 	                      fmt.Println("Am Printing child shipment provenance")
+	                      fmt.Println(shipment.Provenance)	
+	                      jsonVal, _ := json.Marshal(shipment)
+   	                      fmt.Println(string(jsonVal)) 
+	                      return jsonVal, nil	 	    
+	          }else{
+			             if(count!=1){
+			             fmt.Println("Unit Id is not in the repackaged container")
+		 	             jsonResp := "{\"Error\":\"Unit Id is not in the repackaged container \"}"
+		                 return nil, errors.New(jsonResp)
+		   	             }	                                    
+		             }
 	 }else if(len(shipment.ChildContainerId)!=0){
                  valuesAsbytes, err := stub.GetState(containerID)
 	              if len(valuesAsbytes) == 0 {
@@ -1572,7 +1651,7 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
 									  fmt.Println("printing count values")
 									  fmt.Println(count)
 									  fmt.Println(count1)
-						  fmt.Println(parentSupplyChain1)						 
+						              fmt.Println(parentSupplyChain1)						 
 			                          mainConProv.Supplychain=parentSupplyChain1				
 	                                  mainshipment.Provenance=mainConProv           
 			            }				
