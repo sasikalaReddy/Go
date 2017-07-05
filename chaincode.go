@@ -1574,7 +1574,7 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
       fmt.Println(tempConProv)
 	  fmt.Println(tempConProv.TransitStatus)
 	  //consumerName=tempConProv.Receiver
-	  if((tempConProv.TransitStatus=="STATUS_PARTIALLY_SOLD_BY_RETAILER")||(tempConProv.TransitStatus=="STATUS_SOLD_BY_RETAILER")||(tempConProv.TransitStatus=="STATUS_ACCEPTED_BY_RETAILER")){
+	  if((tempConProv.TransitStatus==STATUS_PARTIALLY_SOLD_BY_RETAILER)||(tempConProv.TransitStatus==STATUS_SOLD_BY_RETAILER)||(tempConProv.TransitStatus==STATUS_ACCEPTED_BY_RETAILER)){
 	        searchedPallets,_,resultcount:=searchedPalletsById(acceptedpallets,ID)	
 	        fmt.Println(searchedPallets)
 	        if(len(shipment.ParentContainerId)!=0){
