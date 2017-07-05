@@ -63,10 +63,17 @@ type Container struct {
 	ReceivedDate      string              `json:"recieved_date"` 
     SenderAddress     string              `json:"sender_address"`
 }
+type ContainerDrugNameCombination struct{
+	ContainerId       string              `json:"container_id"`
+	DrugName          string               `json:"drug_name"`
+	GenericName	      string                `json:"generic_name"`
+}
 type UnitIDListJson struct {
 	UnitID  []string            `json:"units_sold"`
 	}
-
+type Response struct {   
+    Message string    `json:"message"`
+}
 type ContainerElements struct {
 	Pallets []Pallet `json:"pallets"`
 	Health string    `json:"container_health"`
@@ -1466,13 +1473,13 @@ func (t *MedLabPharmaChaincode)RejectingbyConsumer(stub shim.ChaincodeStubInterf
 	setCurrentOwner(stub, receiverID, containerID)
 	return jsonVal, nil		
 }
-func searchedPallets(acceptedpallets []Pallet,ID string)([]Pallet, error,int) {
-	 fmt.Println("In searchedPallets")
+func searchedPalletsById(acceptedpallets []Pallet,ID string)([]Pallet, error,int) {
+	 fmt.Println("In searchedPallets by Id")
 	 fmt.Println(acceptedpallets)
 	 fmt.Println(ID)
 	 var a,count2 int
 	 for a=0; a < len(acceptedpallets); a++ {
-        checkCases,_,count:=searchedCases(acceptedpallets[a].Cases,ID)
+        checkCases,_,count:=searchedCasesById(acceptedpallets[a].Cases,ID)
 		fmt.Println("after first pallet")
 		fmt.Println(checkCases)
 		fmt.Println(count)
@@ -1488,13 +1495,13 @@ func searchedPallets(acceptedpallets []Pallet,ID string)([]Pallet, error,int) {
 	 fmt.Println(count2)
 	 	return acceptedpallets,nil,count2
 }
-func searchedCases(acceptedCases []Case,ID string)([]Case, error,int) {
-	 fmt.Println("In searchedCases")
+func searchedCasesById(acceptedCases []Case,ID string)([]Case, error,int) {
+	 fmt.Println("In searchedCases by Id")
 	 fmt.Println(acceptedCases)
 	 var b int
 	 var count1 int
 	 for b=0; b < len(acceptedCases); b++ {
-        checkUnits,_,count:=searchedUnits(acceptedCases[b].Units,ID)
+        checkUnits,_,count:=searchedUnitsById(acceptedCases[b].Units,ID)
 		fmt.Println(checkUnits)
 		fmt.Println(count)
 		if(count==1){
@@ -1509,8 +1516,8 @@ func searchedCases(acceptedCases []Case,ID string)([]Case, error,int) {
 	 fmt.Println(count1)
 	return acceptedCases,nil,count1
 }
-func searchedUnits(acceptedUnits []Unit,ID string)([]Unit, error,int) {
-	 fmt.Println("In searchedUnits")
+func searchedUnitsById(acceptedUnits []Unit,ID string)([]Unit, error,int) {
+	 fmt.Println("In searchedUnits by ID")
 	 fmt.Println(acceptedUnits)
 	 fmt.Println(ID)
 	 var c,count int
@@ -1538,10 +1545,11 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
     var string2 []string
     var containerID string
 	var flag,flag1 bool
-	var m,y,s,count,count1 int
+	var m,y,s,count,count1,countOfhyphen int
 	fmt.Println("running by SearchById:" + ID)
-	flag=strings.Contains(ID, "-")
-	if(flag){
+	countOfhyphen=strings.Count("subCON5-PAL15-CASE2-UNIT3", "-")
+	flag=strings.Contains(ID, "-")   
+	if((flag==true)&&(countOfhyphen==3)){
           fmt.Println(strings.Contains(ID, "-"))
           string2= strings.Split(ID, "-")
           fmt.Println("My string is",string2[0])    
@@ -1562,15 +1570,19 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
 	  shipment := Container{}	  
 	  json.Unmarshal([]byte(valAsbytes), &shipment)
 	  acceptedpallets:=shipment.Elements.Pallets
-	  searchedPallets,_,count55:=searchedPallets(acceptedpallets,ID)	
-	  //if(count55==1)
-	  fmt.Println(searchedPallets)
-	   if(len(shipment.ParentContainerId)!=0){
+	  tempConProv := shipment.Provenance 
+      fmt.Println(tempConProv)
+	  fmt.Println(tempConProv.TransitStatus)
+	  //consumerName=tempConProv.Receiver
+	  if((tempConProv.TransitStatus=="STATUS_PARTIALLY_SOLD_BY_RETAILER")||(tempConProv.TransitStatus=="STATUS_SOLD_BY_RETAILER")||(tempConProv.TransitStatus=="STATUS_ACCEPTED_BY_RETAILER")){
+	        searchedPallets,_,resultcount:=searchedPalletsById(acceptedpallets,ID)	
+	        fmt.Println(searchedPallets)
+	        if(len(shipment.ParentContainerId)!=0){
 		         fmt.Println("It has parent provenance to be attached")
 		         fmt.Println(shipment.ParentContainerId)
-				 if(count55==1) { 
+				 if(resultcount==1) { 
 	                      fmt.Println("Checking if there is the unit in the repackaged container")
-                          fmt.Println(count55)
+                          fmt.Println(resultcount)
 	 	                  valueAsbytes, err := stub.GetState(shipment.ParentContainerId)
 	                      if len(valueAsbytes) == 0 {
 		 	                     jsonResp := "{\"Error\":\"Failed to get state for Container id since there is no such container \"}"
@@ -1591,7 +1603,7 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
 	                      for m=0; m < len(childprov.Supplychain); m++ {
 		 	                        parentSupplyChain=append(parentSupplyChain, childprov.Supplychain[m])
 	                               }
-	                      childsupplychain:=parentSupplyChain
+						  childsupplychain:=parentSupplyChain
 	                      childprov.Supplychain=childsupplychain
 	                      fmt.Println("new conprov")
                           fmt.Println(childprov)
@@ -1605,9 +1617,12 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
 	                      return jsonVal, nil	 	    
 	          }else{
 			             if(count!=1){
-			             fmt.Println("Unit Id may  not be in the repackaged container or it might not be sold")
-		 	             jsonResp := "{\"Error\":\"Unit Id may  not be in the repackaged container or it might not be sold\"}"
-		                 return nil, errors.New(jsonResp)
+							  fmt.Println("Unit Id may  not be in the repackaged container or it might not be sold")
+						      m := Response{"Unit Id may  not be in the repackaged container or it might not be sold"}
+                              jsonval, _ := json.Marshal(m)
+                              fmt.Println(jsonval)
+                              fmt.Println(string(jsonval))
+ 		                      return jsonval,nil
 		   	             }	                                    
 		             }
 	 }else if(len(shipment.ChildContainerId)!=0){
@@ -1685,21 +1700,30 @@ func (t *MedLabPharmaChaincode) SearchById(stub shim.ChaincodeStubInterface,ID s
 						return jsonVal,nil	
 			   }
 			  
-	//   fmt.Println("printing the container being searched")
-	//   fmt.Println(shipment)
-    //   jsonVal, _ := json.Marshal(shipment)
-	//   fmt.Println(string(jsonVal))
-	//   return jsonVal, nil		
-	     }else{
-		       fmt.Println("Though Id is seperated by - it doesnot contain Valid containerID")
-			   jsonResp := "{\"Error\":\"Though Id is seperated by - it doesnot contain Valid containerID \"}"
-		        return nil, errors.New(jsonResp)
+			}else{
+                  fmt.Println("Units which are not accepted by retailer cannot be seen")
+				  m := Response{"Units which are not accepted by retailer cannot be seen"}
+                  jsonval, _ := json.Marshal(m)
+                  fmt.Println(jsonval)
+                  fmt.Println(string(jsonval))
+ 		          return jsonval,nil
+		      }	
+	  }else{
+		         fmt.Println("Though Id is seperated by '-' it doesnot contain Valid UnitID Format")
+				 m := Response{"Though Id is seperated by '-' it doesnot contain Valid UnitID Format"}
+                 jsonval, _ := json.Marshal(m)
+                 fmt.Println(jsonval)
+                 fmt.Println(string(jsonval))
+ 		         return jsonval,nil
 	          }
+	    
 	}else{
-		 fmt.Println("Entered ID is not valid")
-		 jsonResp := "{\"Error\":\"Entered ID is not valid\"}"
-		 return nil, errors.New(jsonResp)
-		return nil,nil
+		  fmt.Println("Entered ID is not in valid format")
+		  m := Response{"Entered ID is not in valid format"}
+          jsonval, _ := json.Marshal(m)
+          fmt.Println(jsonval)
+          fmt.Println(string(jsonval))
+ 		  return jsonval,nil
 	    }
 	return nil,nil
 }
@@ -1912,34 +1936,34 @@ func (t *MedLabPharmaChaincode) SearchByName(stub shim.ChaincodeStubInterface, d
 		fmt.Println(string(jsonVal))
 		return jsonVal, nil		
 }
-func checkPallets(acceptedpallets []Pallet,soldunits []string)([]Pallet, error,bool) {
+func checkPallets(acceptedpallets []Pallet,soldunits []string,customerID string)([]Pallet, error,bool) {
 	 fmt.Println("am in check pallets")
 	 fmt.Println(acceptedpallets)
 	 fmt.Println(soldunits)
 	 var s bool
 	 var a int
 	 for a=0; a < len(acceptedpallets); a++ {
-        checkCases,_,find2:=checkCases(acceptedpallets[a].Cases,soldunits)
+        checkCases,_,find2:=checkCases(acceptedpallets[a].Cases,soldunits,customerID)
 		fmt.Println(checkCases)
 		fmt.Println(find2)
 	 }
 	//return dispatchedpallets,nil,find1
 	return acceptedpallets,nil,s
 }
-func checkCases(acceptedCases []Case,soldunits []string)([]Case, error,bool) {
+func checkCases(acceptedCases []Case,soldunits []string,customerID string)([]Case, error,bool) {
 	 fmt.Println("am in check Cases")
 	 fmt.Println(acceptedCases)
 	 var s1 bool=false
 	 var b int
 	 for b=0; b < len(acceptedCases); b++ {
-        checkUnits,_,find2:=checkUnits(acceptedCases[b].Units,soldunits)
+        checkUnits,_,find2:=checkUnits(acceptedCases[b].Units,soldunits,customerID)
 		fmt.Println(checkUnits)
 		fmt.Println(find2)
 	 }
 	//return dispatchedpallets,nil,find1
 	return acceptedCases,nil,s1
 }
-func checkUnits(acceptedUnits []Unit,soldunits []string)([]Unit, error,bool) {
+func checkUnits(acceptedUnits []Unit,soldunits []string,customerID string)([]Unit, error,bool) {
 	 fmt.Println("am in check Units")
 	 fmt.Println(acceptedUnits)
 	 fmt.Println(soldunits)
@@ -1949,7 +1973,8 @@ func checkUnits(acceptedUnits []Unit,soldunits []string)([]Unit, error,bool) {
 		 for  d=0; d < len(soldunits); d++ {
               if(acceptedUnits[c].UnitId==soldunits[d]){
                  fmt.Println("match occurred")
-				 acceptedUnits[c].SaleStatus=STATUS_SOLD_BY_RETAILER				 
+				 acceptedUnits[c].SaleStatus=STATUS_SOLD_BY_RETAILER
+				 acceptedUnits[c].ConsumerName=customerID				 
 				 fmt.Println(acceptedUnits[c].SaleStatus)
 				 fmt.Println(acceptedUnits[c].UnitId)
 				 fmt.Println(soldunits[d])
@@ -2000,23 +2025,24 @@ func (t *MedLabPharmaChaincode) SellingbyRetailer(stub shim.ChaincodeStubInterfa
 					          shipment := Container{}	  
 	                          json.Unmarshal([]byte(valAsbytes), &shipment) 
 					          acceptedPallets :=shipment.Elements.Pallets
-					          checkedpallets,_,find2:=checkPallets(acceptedPallets,sellunits)							  
+					          checkedpallets,_,find2:=checkPallets(acceptedPallets,sellunits,customerID)							  
 							  fmt.Println(find2)
 							  soldPallets,_,find3,count:=sellPallets(checkedpallets)
 				              fmt.Println(count)
+							  fmt.Println("finding if few pallets were not sold")
 							  fmt.Println(find3)
-				              if(count==len(acceptedPallets)){
+				              if(count==len(acceptedPallets)&&(find3==true)){
                               fmt.Println("updating salestatus in validatesalestatus ")				 				 
-				                      shipment.Elements.Health=STATUS_SOLD_BY_RETAILER 
-				                      conprov:=shipment.Provenance
-									  fmt.Println(conprov)
-                                      supplychain := conprov.Supplychain     
-	                                  chainActivity := ChainActivity{
-		                                  Sender:   shipment.Provenance.Receiver,
-		                                  Receiver: customerID,
-		                                  //ShipmentDate :date,
-		                                  Remarks: remarks,
-		                                  Status:   STATUS_SOLD_BY_RETAILER,		 
+				                       shipment.Elements.Health=STATUS_SOLD_BY_RETAILER 
+				                       conprov:=shipment.Provenance
+									   fmt.Println(conprov)
+                                       supplychain := conprov.Supplychain     
+	                                   chainActivity := ChainActivity{
+		                                    Sender:   shipment.Provenance.Receiver,
+		                                    Receiver: "",
+		                                    //ShipmentDate :date,
+		                                    Remarks: remarks,
+		                                    Status:   STATUS_SOLD_BY_RETAILER,		 
 		                                  }  
 	                                  supplychain = append(supplychain, chainActivity) 
 	                                  conprov.Supplychain = supplychain
@@ -2024,23 +2050,21 @@ func (t *MedLabPharmaChaincode) SellingbyRetailer(stub shim.ChaincodeStubInterfa
                                       conprov.Sender = shipment.Provenance.Receiver
                                       conprov.Receiver = customerID                                                                           		  
 				                      shipment.Provenance = conprov
-							  }
- 			                        // }else{
-									// 	  shipment.Elements.Health=STATUS_PARTIALLY_SOLD_BY_RETAILER 
-				                    //       conprov:=shipment.Provenance
-									//       fmt.Println(conprov)
-                                    //        supplychain := conprov.Supplychain     
-	                                //        chainActivity := ChainActivity{
-		                            //       Sender:   shipment.Provenance.Receiver,
-		                            //       Receiver: customerID,
-		                            //       //ShipmentDate :date,
-		                            //       Remarks: remarks,
-		                            //       Status:   STATUS_PARTIALLY_SOLD_BY_RETAILER,		 
-		                            //       }  
-	                                //   supplychain = append(supplychain, chainActivity) 
-	                                //   conprov.Supplychain = supplychain
-									//   shipment.Provenance = conprov
-									//  }
+							  }else if(find3==false){
+								     fmt.Println("only few units are sold out")
+								     conprov := shipment.Provenance  
+                                     supplychain := conprov.Supplychain     
+	                                 chainActivity := ChainActivity{
+		                             Sender:   shipment.Provenance.Sender,
+		                             Receiver: customerID,
+		                            // ShipmentDate :date,
+		                             Remarks: remarks,
+		                             Status:   STATUS_PARTIALLY_SOLD_BY_RETAILER,		 
+		                             }  
+	                                  supplychain = append(supplychain, chainActivity) 
+	                                  conprov.Supplychain = supplychain
+									  shipment.Provenance = conprov
+									 }
 							   shipment.Elements.Pallets=soldPallets	 
 							  jsonVal, _ := json.Marshal(shipment)
   	                          fmt.Println(string(jsonVal))
@@ -2070,13 +2094,13 @@ func (t *MedLabPharmaChaincode) SellingbyRetailer(stub shim.ChaincodeStubInterfa
 func sellPallets(acceptedpallets []Pallet)([]Pallet, error,bool,int) {
 	 fmt.Println("am in sell Pallets")
 	 fmt.Println(acceptedpallets)	 
-	 var s bool=false
+	 var s bool=true
 	 var a int
 	 var count1 int=0
     for a=0; a < len(acceptedpallets); a++ {
         checkCases,_,find2,count:=sellCases(acceptedpallets[a].Cases)
 		fmt.Println(checkCases)
-		fmt.Println(find2)
+		s=find2
 		if(count==3){
 		   acceptedpallets[a].Health=STATUS_SOLD_BY_RETAILER     
 		   fmt.Println("updating salestatus in sellPallets")
@@ -2099,18 +2123,20 @@ func sellCases(acceptedCases []Case)([]Case, error,bool,int) {
 	var count1 int=0
 	 fmt.Println("am in sell Cases")
 	 fmt.Println(acceptedCases)
-	 var s1 bool=false
+	 var s1 bool=true
 	 var b int
 	// var count int=0
 	 for b=0; b < len(acceptedCases); b++ {
-        checkUnits,_,find2,count:=sellUnits(acceptedCases[b].Units)
+        checkUnits,_,count:=sellUnits(acceptedCases[b].Units)
 		fmt.Println(checkUnits)
-		fmt.Println(find2)
-		fmt.Println(count)
+	    fmt.Println(count)
 	   if(count==3){
 		   acceptedCases[b].Health=STATUS_SOLD_BY_RETAILER     
 		   fmt.Println("updating salestatus in sellCases")
 		   fmt.Println(acceptedCases[b].Health)	    
+		 }else{
+			 fmt.Println("few units were not sold")
+             s1=false
 		 }
 		 if(acceptedCases[b].Health==STATUS_SOLD_BY_RETAILER){
                  fmt.Println("updating salestatus in sellCases as sold out")				 				 
@@ -2124,10 +2150,9 @@ func sellCases(acceptedCases []Case)([]Case, error,bool,int) {
 	  return acceptedCases,nil,s1,count1
 }
 
-func sellUnits(acceptedUnits []Unit)([]Unit, error,bool,int) {
+func sellUnits(acceptedUnits []Unit)([]Unit, error,int) {
 	 fmt.Println("am in sell Units")
 	 fmt.Println(acceptedUnits)
-	 var s2 bool=false
 	 var c int
 	 var count int=0
 	 for c=0; c < len(acceptedUnits); c++ {		 
@@ -2138,7 +2163,7 @@ func sellUnits(acceptedUnits []Unit)([]Unit, error,bool,int) {
 				 count++
 			  }
 	 }
-	return acceptedUnits,nil,s2,count
+	return acceptedUnits,nil,count
 }
 // func (t *MedLabPharmaChaincode) validatesalestatus(stub shim.ChaincodeStubInterface,containerID string,) ([]byte, error) {
 //     fmt.Println("running validatesalestatus")
