@@ -1350,7 +1350,7 @@ func (t *MedLabPharmaChaincode) AcceptContainerbyRetailer(stub shim.ChaincodeStu
 	}
 	shipment := Container{}	  
 	json.Unmarshal([]byte(valAsbytes), &shipment)
-	shipment.Recipient = ""
+	shipment.Recipient = receiverID
 	shipment.Remarks=remarks
 	shipment.ReceivedDate=date
 	conprov := shipment.Provenance  
@@ -1396,7 +1396,7 @@ func (t *MedLabPharmaChaincode)RejectContainerbyRetailer(stub shim.ChaincodeStub
 	}
 	shipment := Container{}	  
 	json.Unmarshal([]byte(valAsbytes), &shipment)
-	shipment.Recipient = ""
+	shipment.Recipient = receiverID
 	shipment.Remarks=remarks
 	shipment.ReceivedDate=date
 	conprov := shipment.Provenance  
