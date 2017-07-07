@@ -1227,7 +1227,7 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 	  dispatchedshipment.ContainerId=childContainerID
 	 // dispatchedshipment.Recipient = receiverID
 	  dispatchedPallets :=dispatchedshipment.Elements.Pallets
-	  if(len(shipment.ChildContainerId)>=1){
+	  if(len(shipment.ChildContainerId)==1){
 		     shipment.Recipient = receiverID
 		    fmt.Println("This is the first child getting repackaged")
 		    fmt.Println( shipment.ChildContainerId)
@@ -2055,7 +2055,7 @@ func (t *MedLabPharmaChaincode) SellingbyRetailer(stub shim.ChaincodeStubInterfa
 								     conprov := shipment.Provenance  
                                      supplychain := conprov.Supplychain     
 	                                 chainActivity := ChainActivity{
-		                             Sender:   shipment.Provenance.Sender,
+		                             Sender:   shipment.Provenance.Receiver,
 		                             Receiver: customerID,
 		                            // ShipmentDate :date,
 		                             Remarks: remarks,
