@@ -1317,7 +1317,7 @@ func (t *MedLabPharmaChaincode) repackagingContainerbyDistributor(stub shim.Chai
 		        conprov.Receiver = receiverID  
                 dispatchedshipment.Provenance = conprov
 				dispatchedshipment.ShipmentDate = shipmentDate
-				//dispatchedshipment.Recipient = receiverID
+				dispatchedshipment.Recipient = receiverID
 	            //dispatchedshipment.Remarks=remarks
 		   jsonVall, _ := json.Marshal(dispatchedshipment)
    	       err = stub.PutState(childContainerID, jsonVall)
