@@ -2040,7 +2040,7 @@ func (t *MedLabPharmaChaincode) SellingbyRetailer(stub shim.ChaincodeStubInterfa
 	                                   chainActivity := ChainActivity{
 		                                    Sender:   shipment.Provenance.Receiver,
 		                                    Receiver: "",
-		                                    //ShipmentDate :date,
+		                                    ShipmentDate :date,
 		                                    Remarks: remarks,
 		                                    Status:   STATUS_SOLD_BY_RETAILER,		 
 		                                  }  
@@ -2057,7 +2057,7 @@ func (t *MedLabPharmaChaincode) SellingbyRetailer(stub shim.ChaincodeStubInterfa
 	                                 chainActivity := ChainActivity{
 		                             Sender:   shipment.Provenance.Receiver,
 		                             Receiver: customerID,
-		                            // ShipmentDate :date,
+		                             ShipmentDate :date,
 		                             Remarks: remarks,
 		                             Status:   STATUS_PARTIALLY_SOLD_BY_RETAILER,		 
 		                             }  
