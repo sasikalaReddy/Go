@@ -32,7 +32,7 @@ const STATUS_REJECTED_BY_DISTRIBUTOR  = "rejected by distributor"
 const STATUS_DISPATCHED_BY_LOGISTICS = "dispatched by logistics"
 const UNIQUE_ID_COUNTER string = "UniqueIDCounter"
 const CONTAINER_OWNER = "ContainerOwner"
-//const RFC1123 = "Mon, 02 Jan 2006 15:04:05 MST"
+//const RFC1123 = "Mon, 02 Jan 2006 15:04:05 MST"  
 
 type MedLabPharmaChaincode struct {
 }
